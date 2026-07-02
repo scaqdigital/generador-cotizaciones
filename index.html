@@ -1,0 +1,648 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Generador de Cotizaciones — ScaleAQ</title>
+    <meta name="description" content="Genera cotizaciones PDF a partir de tu Excel mensual. Procesamiento local seguro en tu navegador.">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #031E40;
+            --secondary: #FF6B00;
+            --bg: #0a0f1a;
+            --bg-card: rgba(255,255,255,0.04);
+            --bg-card-hover: rgba(255,255,255,0.07);
+            --surface: rgba(255,255,255,0.06);
+            --surface-border: rgba(255,255,255,0.08);
+            --text: #e8ecf1;
+            --text-dim: #8a95a8;
+            --success: #34d399;
+            --error: #f87171;
+            --glow-orange: rgba(255,107,0,0.15);
+            --glow-blue: rgba(59,130,246,0.1);
+            --radius: 16px;
+            --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+        html { scroll-behavior: smooth; }
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            padding: 32px 16px;
+            line-height: 1.55;
+            position: relative;
+            overflow-x: hidden;
+        }
+        /* Ambient gradient orbs */
+        body::before, body::after {
+            content: '';
+            position: fixed;
+            border-radius: 50%;
+            filter: blur(120px);
+            z-index: 0;
+            pointer-events: none;
+        }
+        body::before {
+            width: 600px; height: 600px;
+            top: -200px; left: -150px;
+            background: radial-gradient(circle, rgba(255,107,0,0.08) 0%, transparent 70%);
+        }
+        body::after {
+            width: 500px; height: 500px;
+            bottom: -150px; right: -100px;
+            background: radial-gradient(circle, rgba(3,30,64,0.25) 0%, transparent 70%);
+        }
+        .app { width: 100%; max-width: 920px; display: flex; flex-direction: column; gap: 20px; position: relative; z-index: 1; }
+
+        /* Header */
+        .header {
+            display: flex; align-items: center; gap: 16px; padding: 4px 0;
+        }
+        .logo-box {
+            width: 56px; height: 56px;
+            background: linear-gradient(135deg, var(--primary), #0d2c54);
+            border-radius: 14px;
+            display: flex; align-items: center; justify-content: center;
+            box-shadow: 0 4px 20px rgba(3,30,64,0.4);
+            flex-shrink: 0;
+        }
+        .logo-box svg { width: 38px; height: 38px; }
+        .header-text h1 {
+            font-family: 'Outfit', sans-serif;
+            font-size: clamp(20px, 4vw, 26px);
+            font-weight: 700;
+            background: linear-gradient(135deg, #fff 0%, #c8d4e0 100%);
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        .header-text p { font-size: 13px; color: var(--text-dim); }
+
+        /* Card */
+        .card {
+            background: var(--bg-card);
+            backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px);
+            border: 1px solid var(--surface-border);
+            border-radius: 20px;
+            padding: 32px;
+            display: flex; flex-direction: column; gap: 28px;
+            box-shadow: 0 8px 40px rgba(0,0,0,0.2);
+        }
+
+        /* Drop zone */
+        .drop-zone {
+            border: 2px dashed rgba(255,255,255,0.1);
+            border-radius: var(--radius);
+            padding: 48px 20px;
+            text-align: center;
+            cursor: pointer;
+            background: rgba(255,255,255,0.015);
+            transition: var(--transition);
+            position: relative;
+        }
+        .drop-zone:hover, .drop-zone.dragover {
+            border-color: var(--secondary);
+            background: var(--glow-orange);
+            box-shadow: inset 0 0 60px rgba(255,107,0,0.04);
+        }
+        .dz-icon {
+            width: 44px; height: 44px;
+            margin: 0 auto 14px;
+            color: var(--text-dim);
+            transition: var(--transition);
+        }
+        .drop-zone:hover .dz-icon { color: var(--secondary); transform: translateY(-3px); }
+        .dz-primary { font-size: 15px; font-weight: 600; color: var(--text); margin-bottom: 4px; }
+        .dz-secondary { font-size: 13px; color: var(--text-dim); }
+        .file-input { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+
+        /* File info bar */
+        .file-bar {
+            display: flex; align-items: center; justify-content: space-between;
+            background: rgba(255,107,0,0.06);
+            border: 1px solid rgba(255,107,0,0.12);
+            padding: 12px 18px;
+            border-radius: 10px;
+            font-weight: 500; font-size: 14px;
+            color: var(--secondary);
+        }
+        .file-bar .x {
+            background: none; border: none; font-size: 20px;
+            color: var(--text-dim); cursor: pointer; line-height: 1;
+            transition: var(--transition);
+        }
+        .file-bar .x:hover { color: var(--error); }
+
+        /* Preview */
+        .preview { display: flex; flex-direction: column; gap: 14px; animation: fadeUp .4s ease; }
+        .section-head { display: flex; align-items: center; justify-content: space-between; }
+        .section-head h2 { font-family: 'Outfit', sans-serif; font-size: 17px; font-weight: 600; color: var(--text); }
+        .pill {
+            background: rgba(255,107,0,0.1);
+            color: var(--secondary);
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px; font-weight: 600;
+        }
+        .tbl-wrap {
+            max-height: 320px; overflow-y: auto;
+            border: 1px solid var(--surface-border);
+            border-radius: var(--radius);
+        }
+        .tbl-wrap::-webkit-scrollbar { width: 6px; }
+        .tbl-wrap::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.08); border-radius: 3px; }
+        table { width: 100%; border-collapse: collapse; font-size: 13px; }
+        th, td { padding: 11px 14px; border-bottom: 1px solid rgba(255,255,255,0.04); text-align: left; }
+        th {
+            background: rgba(255,255,255,0.03);
+            font-weight: 600; color: var(--text-dim);
+            font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px;
+            position: sticky; top: 0; z-index: 2;
+        }
+        td { color: var(--text); }
+        tr:hover td { background: rgba(255,255,255,0.02); }
+        td code { background: rgba(255,107,0,0.08); color: var(--secondary); padding: 2px 7px; border-radius: 4px; font-size: 12px; }
+        .client-name { font-weight: 600; color: #fff; }
+        .mono { font-variant-numeric: tabular-nums; }
+
+        /* Buttons */
+        .btn {
+            display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+            padding: 14px 28px; font-size: 14px; font-weight: 600;
+            border-radius: 10px; border: none; cursor: pointer;
+            transition: var(--transition); width: 100%;
+            font-family: 'Inter', sans-serif;
+        }
+        .btn:disabled { opacity: .4; pointer-events: none; }
+        .btn-primary {
+            background: linear-gradient(135deg, var(--secondary), #e05500);
+            color: #fff;
+            box-shadow: 0 4px 16px rgba(255,107,0,0.25);
+        }
+        .btn-primary:hover { transform: translateY(-1px); box-shadow: 0 6px 24px rgba(255,107,0,0.35); }
+        .btn-success {
+            background: linear-gradient(135deg, #10b981, #059669);
+            color: #fff;
+            box-shadow: 0 4px 16px rgba(16,185,129,0.25);
+        }
+        .btn-success:hover { transform: translateY(-1px); box-shadow: 0 6px 24px rgba(16,185,129,0.35); }
+        .btn-ghost {
+            background: rgba(255,255,255,0.04);
+            border: 1px solid rgba(255,255,255,0.08);
+            color: var(--text-dim);
+        }
+        .btn-ghost:hover { background: rgba(255,255,255,0.07); color: var(--text); }
+        .btn svg { width: 18px; height: 18px; }
+
+        /* Progress */
+        .progress { padding: 20px 0; animation: fadeUp .3s ease; }
+        .pbar-track { background: rgba(255,255,255,0.06); height: 6px; border-radius: 3px; overflow: hidden; margin-bottom: 14px; }
+        .pbar-fill { height: 100%; width: 0%; background: linear-gradient(90deg, var(--secondary), #fbbf24); border-radius: 3px; transition: width .3s ease; }
+        .pbar-text { font-size: 13px; color: var(--text-dim); text-align: center; font-weight: 500; }
+
+        /* Results */
+        .results {
+            text-align: center; display: flex; flex-direction: column; gap: 20px;
+            animation: scaleIn .4s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+        .results-msg { display: flex; flex-direction: column; align-items: center; gap: 10px; }
+        .check-circle {
+            width: 52px; height: 52px;
+            background: rgba(52,211,153,0.1);
+            color: var(--success);
+            border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 26px; font-weight: bold;
+        }
+        .results-msg h2 { font-family: 'Outfit', sans-serif; font-size: 20px; color: #fff; }
+        .results-msg p { font-size: 13px; color: var(--text-dim); max-width: 400px; }
+        .security-note {
+            font-size: 11px !important; color: var(--text-dim) !important;
+            background: rgba(255,255,255,0.03);
+            border: 1px solid rgba(255,255,255,0.06);
+            padding: 10px 14px; border-radius: 8px;
+            margin-top: 4px; max-width: 400px;
+        }
+        .results-btns { display: flex; flex-direction: column; gap: 10px; max-width: 300px; margin: 0 auto; width: 100%; }
+
+        /* Footer */
+        .footer { text-align: center; font-size: 11px; color: rgba(255,255,255,0.2); padding: 8px 0; }
+
+        .hidden { display: none !important; }
+
+        @keyframes fadeUp { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes scaleIn { from { opacity: 0; transform: scale(0.94); } to { opacity: 1; transform: scale(1); } }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        @media (max-width: 640px) {
+            .card { padding: 20px; }
+            .drop-zone { padding: 32px 16px; }
+            th, td { padding: 8px 10px; font-size: 12px; }
+        }
+    </style>
+</head>
+<body>
+<div class="app">
+    <!-- Header -->
+    <header class="header">
+        <div class="logo-box">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 50 50" fill="none">
+                <text x="4" y="28" font-family="Outfit, Inter, sans-serif" font-weight="800" font-size="14" fill="#fff">S</text>
+                <text x="14" y="28" font-family="Outfit, Inter, sans-serif" font-weight="900" font-size="14" fill="#FF6B00">AQ</text>
+                <line x1="10" y1="34" x2="38" y2="34" stroke="#FF6B00" stroke-width="2.5" stroke-linecap="round"/>
+                <line x1="8" y1="38" x2="34" y2="38" stroke="rgba(255,255,255,0.3)" stroke-width="1.5" stroke-linecap="round"/>
+            </svg>
+        </div>
+        <div class="header-text">
+            <h1>Generador de Cotizaciones</h1>
+            <p>ScaleAQ — Procesamiento 100% local en tu navegador</p>
+        </div>
+    </header>
+
+    <!-- Main Card -->
+    <main class="card">
+        <!-- Step 1: Upload -->
+        <section id="uploadSection">
+            <div class="drop-zone" id="dropZone">
+                <div class="dz-icon">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="44" height="44">
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                        <polyline points="17 8 12 3 7 8"/>
+                        <line x1="12" y1="3" x2="12" y2="15"/>
+                    </svg>
+                </div>
+                <p class="dz-primary">Arrastra el archivo Excel mensual aquí</p>
+                <p class="dz-secondary">o haz clic para buscarlo en tu equipo</p>
+                <input type="file" id="fileInput" accept=".xlsx,.xls" class="file-input">
+            </div>
+            <div class="file-bar hidden" id="fileBar">
+                <span id="fileName"></span>
+                <button class="x" id="btnClear" title="Quitar">&times;</button>
+            </div>
+        </section>
+
+        <!-- Step 2: Preview -->
+        <section class="preview hidden" id="previewSection">
+            <div class="section-head">
+                <h2>Facturación Detectada</h2>
+                <span class="pill" id="clientCount">0 cotizaciones</span>
+            </div>
+            <div class="tbl-wrap">
+                <table>
+                    <thead><tr><th>Cliente</th><th>Cotización Nº</th><th>Ítems</th><th>Total UF</th><th>Total USD</th></tr></thead>
+                    <tbody id="previewBody"></tbody>
+                </table>
+            </div>
+            <button class="btn btn-primary" id="btnGenerate" disabled>
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+                Generar Todas las Cotizaciones
+            </button>
+        </section>
+
+        <!-- Step 3: Progress -->
+        <section class="progress hidden" id="progressSection">
+            <div class="pbar-track"><div class="pbar-fill" id="progressBar"></div></div>
+            <p class="pbar-text" id="progressText">Inicializando...</p>
+        </section>
+
+        <!-- Step 4: Results -->
+        <section class="results hidden" id="resultsSection">
+            <div class="results-msg">
+                <div class="check-circle">✓</div>
+                <h2>¡Cotizaciones Generadas!</h2>
+                <p>Todas las cotizaciones fueron creadas con el formato corporativo ScaleAQ.</p>
+                <p class="security-note">🔒 Todo se procesó en tu navegador. Tus datos nunca salieron de tu equipo.</p>
+            </div>
+            <div class="results-btns">
+                <button class="btn btn-success" id="btnDownload">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                    Descargar ZIP
+                </button>
+                <button class="btn btn-ghost" id="btnReset">Procesar otro archivo</button>
+            </div>
+        </section>
+    </main>
+
+    <footer class="footer">ScaleAQ — Los datos se procesan en tu navegador, sin servidores.</footer>
+</div>
+
+<!-- CDN libs (only 3, no Node/server needed) -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.12/pdfmake.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.12/vfs_fonts.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<script>
+(function() {
+    'use strict';
+
+    // DOM refs
+    const $ = id => document.getElementById(id);
+    const dropZone = $('dropZone'), fileInput = $('fileInput'), fileBar = $('fileBar'),
+          fileName = $('fileName'), btnClear = $('btnClear'),
+          previewSection = $('previewSection'), previewBody = $('previewBody'),
+          clientCount = $('clientCount'), btnGenerate = $('btnGenerate'),
+          progressSection = $('progressSection'), progressBar = $('progressBar'),
+          progressText = $('progressText'),
+          resultsSection = $('resultsSection'), btnDownload = $('btnDownload'),
+          btnReset = $('btnReset');
+
+    let currentFile = null, parsedQuotes = [], zipBlob = null, zipName = 'cotizaciones.zip';
+
+    // --- Drag & Drop ---
+    ['dragenter','dragover'].forEach(ev => dropZone.addEventListener(ev, e => { e.preventDefault(); dropZone.classList.add('dragover'); }));
+    ['dragleave','drop'].forEach(ev => dropZone.addEventListener(ev, e => { e.preventDefault(); dropZone.classList.remove('dragover'); }));
+    dropZone.addEventListener('drop', e => { if (e.dataTransfer.files.length) handleFile(e.dataTransfer.files[0]); });
+    fileInput.addEventListener('change', () => { if (fileInput.files.length) handleFile(fileInput.files[0]); });
+    btnClear.addEventListener('click', e => { e.stopPropagation(); reset(); });
+    btnReset.addEventListener('click', reset);
+
+    function handleFile(file) {
+        if (!/\.xlsx?$/i.test(file.name)) return alert('Selecciona un archivo Excel (.xlsx o .xls)');
+        currentFile = file;
+        fileName.textContent = file.name;
+        dropZone.classList.add('hidden');
+        fileBar.classList.remove('hidden');
+        parseExcel(file);
+    }
+
+    // --- Excel Parser ---
+    function parseExcel(file) {
+        previewBody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:var(--text-dim)">Analizando archivo…</td></tr>';
+        previewSection.classList.remove('hidden');
+
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            try {
+                const wb = XLSX.read(new Uint8Array(e.target.result), { type: 'array' });
+
+                // Maestro
+                const maestro = {};
+                if (wb.SheetNames.includes('Maestro')) {
+                    XLSX.utils.sheet_to_json(wb.Sheets['Maestro']).forEach(r => {
+                        const c = (r['Cliente']||'').toString().trim();
+                        if (c) maestro[c.toLowerCase()] = { solicitadoPor: r['Solicitado por']||'', correo: r['Correo']||'' };
+                    });
+                }
+
+                // Mes
+                if (!wb.SheetNames.includes('Mes')) throw new Error('Falta la hoja "Mes" en el Excel');
+                const rows = XLSX.utils.sheet_to_json(wb.Sheets['Mes'], { header: 1 });
+                if (rows.length < 5) throw new Error('La hoja "Mes" no tiene datos suficientes');
+
+                const h = rows[3];
+                if (!h || !h.includes('CLIENTE') || !h.includes('Cotización ID'))
+                    throw new Error('Faltan columnas CLIENTE o Cotización ID en la fila 4');
+
+                const idx = {
+                    cli: h.indexOf('CLIENTE'), cot: h.indexOf('Cotización ID'),
+                    tar: h.indexOf('TARIFA MENSUAL'), mon: h.indexOf('MONEDA'),
+                    det: h.indexOf('Detalle'), cob: h.indexOf('COBRO ASOCIADO'),
+                    itm: h.indexOf('ITEM COBRADO'), ema: h.indexOf('Correo')
+                };
+
+                const groups = {};
+                for (let i = 4; i < rows.length; i++) {
+                    const r = rows[i];
+                    if (!r || !r[idx.cli]) continue;
+                    const cli = r[idx.cli].toString().trim();
+                    const cot = (r[idx.cot]||'').toString().trim();
+                    if (!cot || /^(no aplica|n\/a)$/i.test(cot)) continue;
+
+                    const key = cli + '::' + cot;
+                    if (!groups[key]) {
+                        const m = maestro[cli.toLowerCase()] || {};
+                        groups[key] = {
+                            cliente: cli, cotizacionId: cot, items: [],
+                            solicitadoPor: m.solicitadoPor || '',
+                            correo: m.correo || (idx.ema !== -1 && r[idx.ema] ? r[idx.ema].toString().trim() : '')
+                        };
+                    }
+                    const raw = r[idx.tar];
+                    const tarifa = typeof raw === 'number' ? raw : parseFloat(raw) || 0;
+                    const moneda = (r[idx.mon]||'UF').toString().trim().toUpperCase();
+                    let detalle = '';
+                    if (idx.det !== -1 && r[idx.det]) { detalle = r[idx.det].toString().trim(); }
+                    else {
+                        const a = r[idx.cob] ? r[idx.cob].toString().trim() : '';
+                        const b = r[idx.itm] ? r[idx.itm].toString().trim() : '';
+                        detalle = a && b ? a+' - '+b : a||b||'Servicio';
+                    }
+                    groups[key].items.push({ detalle, tarifa, moneda });
+                }
+
+                parsedQuotes = Object.values(groups).map(g => {
+                    let tUF = 0, tUSD = 0;
+                    g.items.forEach(it => { if (it.moneda==='UF') tUF+=it.tarifa; if (it.moneda==='USD') tUSD+=it.tarifa; });
+                    return {
+                        name: g.cliente, cotizacionId: g.cotizacionId,
+                        solicitadoPor: g.solicitadoPor || 'No especificado',
+                        correo: g.correo || 'No especificado',
+                        itemCount: g.items.length, totalUF: tUF, totalUSD: tUSD, items: g.items
+                    };
+                }).sort((a,b) => a.name.localeCompare(b.name));
+
+                renderPreview();
+            } catch(err) {
+                alert('Error al leer el Excel: ' + err.message);
+                reset();
+            }
+        };
+        reader.onerror = () => { alert('Error leyendo el archivo'); reset(); };
+        reader.readAsArrayBuffer(file);
+    }
+
+    function renderPreview() {
+        previewBody.innerHTML = '';
+        if (!parsedQuotes.length) {
+            previewBody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:var(--error)">No se encontraron cotizaciones.</td></tr>';
+            btnGenerate.disabled = true;
+            return;
+        }
+        clientCount.textContent = parsedQuotes.length + ' cotizaciones';
+        btnGenerate.disabled = false;
+        const fmt = n => n.toLocaleString('es-CL', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        parsedQuotes.forEach(q => {
+            const tr = document.createElement('tr');
+            tr.innerHTML =
+                `<td class="client-name">${q.name}</td>` +
+                `<td><code>${q.cotizacionId}</code></td>` +
+                `<td class="mono">${q.itemCount}</td>` +
+                `<td class="mono">${fmt(q.totalUF)}</td>` +
+                `<td class="mono">${fmt(q.totalUSD)}</td>`;
+            previewBody.appendChild(tr);
+        });
+    }
+
+    // --- PDF Generation ---
+    function docDef(q) {
+        const today = (() => { const d=new Date(); return [d.getDate(),d.getMonth()+1].map(n=>String(n).padStart(2,'0')).join('-')+'-'+d.getFullYear(); })();
+        const uf = q.items.filter(i => i.moneda==='UF');
+        const usd = q.items.filter(i => i.moneda==='USD');
+        const fmt = n => n.toLocaleString('es-CL', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+        // Vectorized ScaleAQ Logo to avoid rendering differences or missing fonts in PDF
+        const scaleAQLogoSVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 260 50" width="130" height="25">
+            <!-- S -->
+            <path d="M12,12 C4,12 2,15 2,18 L9,20 C9,18 10,17 12,17 C14,17 15,18 15,19 C15,21 13,21 10,22 C5,24 2,25 2,29 C2,34 6,36 12,36 C19,36 21,32 21,29 L14,27 C14,29 13,31 12,31 C10,31 9,30 9,29 C9,27 11,27 14,26 C19,24 22,23 22,19 C22,14 18,12 12,12 Z" fill="#031E40"/>
+            <!-- C -->
+            <path d="M43,12 L29,12 C25,12 23,15 23,19 L23,29 C23,33 25,36 29,36 L43,36 L43,31 L30,31 C29,31 29,30 29,29 L29,19 C29,18 29,17 30,17 L43,17 Z" fill="#031E40"/>
+            <!-- A -->
+            <path d="M57,12 L47,36 L54,36 L56,31 L64,31 L66,36 L73,36 Z M60,18 L62,26 L58,26 Z" fill="#031E40"/>
+            <!-- L -->
+            <path d="M77,12 L77,36 L94,36 L94,31 L83,31 L83,12 Z" fill="#031E40"/>
+            <!-- E -->
+            <path d="M98,12 L98,36 L115,36 L115,31 L104,31 L104,26 L112,26 L112,21 L104,21 L104,17 L114,17 L114,12 Z" fill="#031E40"/>
+            <!-- AQ (Orange) -->
+            <path d="M135,17 L125,41 L132,41 L134,36 L142,36 L144,41 L151,41 Z M138,23 L140,31 L136,31 Z" fill="#FF6B00"/>
+            <path d="M168,17 L155,17 C151,17 149,20 149,24 L149,34 C149,38 151,41 155,41 L168,41 L168,36 L155,36 C154,36 154,35 154,34 L154,24 C154,23 154,22 155,22 L168,22 Z" fill="#FF6B00"/>
+            <rect x="159" y="32" width="11" height="5" fill="#FF6B00" transform="rotate(45 164 34)"/>
+            <!-- Navy Line above AQ -->
+            <rect x="124" y="11" width="45" height="4" fill="#031E40"/>
+        </svg>`;
+
+        const tbl = (items, cur) => {
+            const body = [[
+                { text: 'Cantidad', style: 'th', alignment: 'center' },
+                { text: 'Detalle', style: 'th', alignment: 'center' },
+                { text: 'Valor ' + cur, style: 'th', alignment: 'right' }
+            ]];
+
+            // Add real items
+            items.forEach(it => body.push([
+                { text: '1', style: 'td', alignment: 'center' },
+                { text: it.detalle, style: 'td' },
+                { text: fmt(it.tarifa), style: 'td', alignment: 'right' }
+            ]));
+
+            // Fill with empty spacer rows to match traditional Excel layout (at least 8 rows total)
+            const minRows = 8;
+            const emptyRowsNeeded = Math.max(0, minRows - items.length);
+            for (let i = 0; i < emptyRowsNeeded; i++) {
+                body.push([
+                    { text: '', style: 'td' },
+                    { text: '', style: 'td' },
+                    { text: '', style: 'td' }
+                ]);
+            }
+
+            // Total row
+            const sum = items.reduce((a,c) => a+c.tarifa, 0);
+            body.push([
+                { text: '', border: [true, true, true, true] },
+                { text: 'Total', alignment: 'right', bold: true, style: 'td_total', border: [true, true, true, true] },
+                { text: fmt(sum), alignment: 'right', bold: true, style: 'td_total', border: [true, true, true, true] }
+            ]);
+            return body;
+        };
+
+        return {
+            content: [
+                { columns: [
+                    { width: 180, table: { widths: [90,80], body: [
+                        [{ text:'Cotización N°', bold:true, fontSize:10, style: 'metaLabel' }, { text:q.cotizacionId, fontSize:10, alignment:'center', style: 'metaVal' }],
+                        [{ text:'Fecha', bold:true, fontSize:10, style: 'metaLabel' }, { text:today, fontSize:10, alignment:'center', style: 'metaVal' }]
+                    ]}},
+                    { svg: scaleAQLogoSVG, alignment:'right', margin:[0,5,0,0] }
+                ]},
+                { text:'', margin:[0,20] },
+                { table: { widths:[90,'*'], body: [
+                    [{ text:'Señor(es)', bold:true, fontSize:10, style: 'metaLabel' }, { text:q.name, fontSize:10, style: 'metaVal' }],
+                    [{ text:'Solicitado por', bold:true, fontSize:10, style: 'metaLabel' }, { text:q.solicitadoPor, fontSize:10, style: 'metaVal' }],
+                    [{ text:'Correo', bold:true, fontSize:10, style: 'metaLabel' }, { text:q.correo, fontSize:10, style: 'metaVal' }]
+                ]}, margin:[0,0,0,25] },
+                { table: { widths:[65,'*',100], body: tbl(uf,'UF') }, margin:[0,0,0,25] },
+                { table: { widths:[65,'*',100], body: tbl(usd,'USD') }, margin:[0,0,0,30] },
+                { text:'Comentarios:', bold:true, fontSize:10, margin:[0,0,0,5] },
+                { text:'• Valores más IVA\n• Esta cotización tiene una validez de 15 días a contar fecha de recepción', fontSize:9, lineHeight:1.3 }
+            ],
+            defaultStyle: { font: 'Roboto' },
+            styles: {
+                th: { bold:true, fontSize:10, color:'#000000', margin:[4,4,4,4] },
+                td: { fontSize:9, color:'#000000', margin:[4,4,4,4] },
+                td_total: { fontSize:10, color:'#000000', margin:[4,4,4,4] },
+                metaLabel: { color: '#000000', margin:[4,3,4,3] },
+                metaVal: { color: '#000000', margin:[4,3,4,3] }
+            }
+        };
+    }
+
+
+    btnGenerate.addEventListener('click', async () => {
+        if (!parsedQuotes.length) return;
+        previewSection.classList.add('hidden');
+        progressSection.classList.remove('hidden');
+        progressBar.style.width = '0%';
+        progressText.textContent = 'Inicializando motor PDF…';
+
+        const zip = new JSZip();
+        try {
+            for (let i = 0; i < parsedQuotes.length; i++) {
+                const q = parsedQuotes[i];
+                progressText.textContent = `PDF ${i+1}/${parsedQuotes.length} — ${q.name}`;
+                progressBar.style.width = Math.round((i/parsedQuotes.length)*60) + '%';
+
+                await new Promise(resolve => {
+                    pdfMake.createPdf(docDef(q)).getBuffer(buf => {
+                        const safe = q.name.replace(/[^a-zA-Z0-9áéíóúñÁÉÍÓÚÑ]/g, '_');
+                        zip.file(`${q.cotizacionId}_${safe}.pdf`, buf);
+                        resolve();
+                    });
+                });
+
+                // Yield to keep UI responsive
+                await new Promise(r => setTimeout(r, 0));
+            }
+
+            progressText.textContent = 'Comprimiendo ZIP…';
+            progressBar.style.width = '75%';
+
+            zipBlob = await zip.generateAsync({ type: 'blob' }, meta => {
+                progressBar.style.width = (75 + Math.round(meta.percent * 0.25)) + '%';
+            });
+
+            progressBar.style.width = '100%';
+            progressText.textContent = '¡Listo!';
+            zipName = 'Cotizaciones_' + currentFile.name.replace(/\.[^/.]+$/, '') + '.zip';
+
+            setTimeout(() => {
+                progressSection.classList.add('hidden');
+                resultsSection.classList.remove('hidden');
+            }, 400);
+        } catch(err) {
+            console.error(err);
+            alert('Error generando PDFs: ' + err.message);
+            progressSection.classList.add('hidden');
+            previewSection.classList.remove('hidden');
+        }
+    });
+
+    btnDownload.addEventListener('click', () => {
+        if (!zipBlob) return;
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(zipBlob);
+        a.download = zipName;
+        a.click();
+        URL.revokeObjectURL(a.href);
+    });
+
+    function reset() {
+        currentFile = null; parsedQuotes = []; zipBlob = null;
+        fileInput.value = ''; fileName.textContent = '';
+        dropZone.classList.remove('hidden');
+        fileBar.classList.add('hidden');
+        [previewSection, progressSection, resultsSection].forEach(s => s.classList.add('hidden'));
+        previewBody.innerHTML = '';
+        clientCount.textContent = '0 cotizaciones';
+        btnGenerate.disabled = true;
+    }
+})();
+</script>
+</body>
+</html>
