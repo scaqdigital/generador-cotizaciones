@@ -557,11 +557,12 @@
         const contentBlocks = [
             // Header: cotización + logo
             { columns: [
-                { width: 185, table: { widths: [95, 80], body: [
+                { width: 230, table: { widths: [95, 130], body: [
                     [{ text:'Cotización N°', bold:true, fontSize:10, style:'metaLabel' }, { text:q.cotizacionId, fontSize:10, alignment:'center', style:'metaVal' }],
                     [{ text:'Fecha', bold:true, fontSize:10, style:'metaLabel' }, { text:today, fontSize:10, alignment:'center', style:'metaVal' }]
                 ]}},
-                { image: scaleAQLogoBase64, width: 140, alignment:'right', margin:[0,2,0,0] }
+                { width: '*', text: '' },
+                { width: 115, image: scaleAQLogoBase64, alignment:'right', margin:[0,2,0,0] }
             ]},
             { text:'', margin:[0,18] },
             // Datos del cliente
@@ -589,11 +590,11 @@
             content: contentBlocks,
             defaultStyle: { font: 'Roboto', fontSize: 10 },
             styles: {
-                th:       { bold:true, fontSize:10, color:'#ffffff', fillColor:'#031E40', margin:[5,5,5,5] },
-                td:       { fontSize:9,  color:'#000000', margin:[5,4,5,4] },
-                td_total: { fontSize:10, color:'#000000', margin:[5,4,5,4] },
-                metaLabel:{ color:'#000000', margin:[5,4,5,4] },
-                metaVal:  { color:'#000000', margin:[5,4,5,4] }
+                th:       { bold:true, fontSize:10, color:'#ffffff', fillColor:'#031E40', margin:[5,3,5,3] },
+                td:       { fontSize:9,  color:'#000000', margin:[5,2,5,2] },
+                td_total: { fontSize:10, color:'#000000', margin:[5,2,5,2] },
+                metaLabel:{ color:'#000000', margin:[5,2,5,2] },
+                metaVal:  { color:'#000000', margin:[5,2,5,2] }
             }
         };
     }
