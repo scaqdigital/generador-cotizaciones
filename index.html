@@ -323,10 +323,11 @@
                 <label for="filterMode" style="font-size:13px;color:var(--text-dim);font-weight:500;">Tipo de cotización a generar:</label>
                 <select id="filterMode" class="filter-select">
                     <option value="mensual">Solo Mensuales (COT-YYYY-MM)</option>
-                    <option value="todas">Todas las cotizaciones</option>
-                    <option value="spot">Solo Spot / Proyectos (COT-YYYY-Qx, AN, etc.)</option>
+                    <option value="todas">Todas las que corresponden este mes</option>
+                    <option value="spot">Solo Periódicas (AN, S1, Q) que corresponden este mes</option>
                 </select>
             </div>
+            <p class="dz-secondary" id="periodicityNote" style="margin-top:-6px;"></p>
             <button class="btn btn-primary" id="btnGenerate" disabled>
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
                 Generar Todas las Cotizaciones
@@ -488,6 +489,15 @@
     function renderPreview() {
         previewBody.innerHTML = '';
         const quotes = applyFilter(parsedQuotes);
+
+        const excluidas = parsedQuotes.filter(q => !esMesDeEnvio(q.cotizacionId, new Date()));
+        const nota = $('periodicityNote');
+        if (nota) {
+            nota.textContent = excluidas.length
+                ? `${excluidas.length} cotización(es) periódica(s) no corresponden este mes y quedaron excluidas: ${excluidas.map(q => `${q.name} (${q.cotizacionId})`).join(', ')}`
+                : '';
+        }
+
         if (!quotes.length) {
             previewBody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:var(--error)">No hay cotizaciones con el filtro seleccionado.</td></tr>';
             btnGenerate.disabled = true;
@@ -602,20 +612,50 @@
 
     const filterMode = $('filterMode');
 
+    // --- Periodicidad de cotizaciones (sufijo de "Cotización ID": COT-YYYY-<codigo>) ---
+    //   01-12 → mensual: siempre corresponde (el Excel ya es la ingesta de ese mes)
+    //   AN    → anual: solo corresponde en enero
+    //   S1    → semestral: corresponde en enero y julio
+    //   Q     → trimestral: corresponde en enero, abril, julio y octubre
+    const MESES_POR_CODIGO = { AN: [1], S1: [1, 7], Q: [1, 4, 7, 10] };
+
+    function codigoDeCotizacion(cotizacionId) {
+        const m = /^COT-\d{4}-([A-Za-z0-9]+)$/i.exec((cotizacionId || '').trim());
+        return m ? m[1].toUpperCase() : null;
+    }
+
+    // Código desconocido o formato no reconocido: no se bloquea (se deja pasar) para no ocultar datos raros.
+    function esMesDeEnvio(cotizacionId, mesRef) {
+        const code = codigoDeCotizacion(cotizacionId);
+        if (!code || /^\d{2}$/.test(code)) return true;
+        const meses = MESES_POR_CODIGO[code];
+        return meses ? meses.includes(mesRef.getMonth() + 1) : true;
+    }
+
     // Función que aplica el filtro seleccionado
     function applyFilter(quotes) {
         const mode = filterMode ? filterMode.value : 'mensual';
         // Mensual: COT-YYYY-MM → mes como número de 2 dígitos (01-12)
         const isMensual = id => /^COT-\d{4}-(0[1-9]|1[0-2])$/i.test(id);
-        if (mode === 'mensual') return quotes.filter(q => isMensual(q.cotizacionId));
-        if (mode === 'spot')    return quotes.filter(q => !isMensual(q.cotizacionId));
-        return quotes; // todas
+        const debidasEsteMes = quotes.filter(q => esMesDeEnvio(q.cotizacionId, new Date()));
+        if (mode === 'mensual') return debidasEsteMes.filter(q => isMensual(q.cotizacionId));
+        if (mode === 'spot')    return debidasEsteMes.filter(q => !isMensual(q.cotizacionId));
+        return debidasEsteMes; // todas las que corresponden este mes
     }
 
     // Refrescar preview cuando cambia el filtro
     filterMode && filterMode.addEventListener('change', () => {
         if (parsedQuotes.length) renderPreview();
     });
+
+    // Deriva el mes (YYYY-MM) del ID de cotización mensual (COT-YYYY-MM); si no calza el patrón
+    // (cotizaciones spot/proyecto), usa el mes en curso como carpeta de archivo.
+    function mesDeCotizacion(cotizacionId) {
+        const m = /^COT-(\d{4})-(0[1-9]|1[0-2])$/i.exec(cotizacionId);
+        if (m) return `${m[1]}-${m[2]}`;
+        const d = new Date();
+        return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+    }
 
     btnGenerate.addEventListener('click', async () => {
         if (!parsedQuotes.length) return;
@@ -626,23 +666,36 @@
 
         const toGenerate = applyFilter(parsedQuotes);
         const zip = new JSZip();
+        const manifest = [];
         try {
             for (let i = 0; i < toGenerate.length; i++) {
                 const q = toGenerate[i];
                 progressText.textContent = `PDF ${i+1}/${toGenerate.length} — ${q.name}`;
                 progressBar.style.width = Math.round((i/toGenerate.length)*60) + '%';
 
+                const safe = q.name.replace(/[^a-zA-Z0-9áéíóúñÁÉÍÓÚÑ]/g, '_');
+                const archivo = `${q.cotizacionId}_${safe}.pdf`;
+
                 await new Promise(resolve => {
                     pdfMake.createPdf(docDef(q)).getBuffer(buf => {
-                        const safe = q.name.replace(/[^a-zA-Z0-9áéíóúñÁÉÍÓÚÑ]/g, '_');
-                        zip.file(`${q.cotizacionId}_${safe}.pdf`, buf);
+                        zip.file(archivo, buf);
                         resolve();
                     });
+                });
+
+                manifest.push({
+                    cliente: q.name,
+                    cotizacionId: q.cotizacionId,
+                    correo: q.correo,
+                    mes: mesDeCotizacion(q.cotizacionId),
+                    archivo
                 });
 
                 // Yield to keep UI responsive
                 await new Promise(r => setTimeout(r, 0));
             }
+
+            zip.file('manifiesto.json', JSON.stringify(manifest, null, 2));
 
             progressText.textContent = 'Comprimiendo ZIP…';
             progressBar.style.width = '75%';
