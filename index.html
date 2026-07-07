@@ -310,7 +310,7 @@
         <!-- Step 2: Preview -->
         <section class="preview hidden" id="previewSection">
             <div class="section-head">
-                <h2>Facturación Detectada</h2>
+                <h2>Facturación Detectada <span id="monthLabel" style="color:var(--secondary);font-size:15px;font-weight:600;"></span></h2>
                 <span class="pill" id="clientCount">0 cotizaciones</span>
             </div>
             <div class="tbl-wrap">
@@ -322,9 +322,12 @@
             <div class="filter-row">
                 <label for="filterMode" style="font-size:13px;color:var(--text-dim);font-weight:500;">Tipo de cotización a generar:</label>
                 <select id="filterMode" class="filter-select">
-                    <option value="mensual">Solo Mensuales (COT-YYYY-MM)</option>
-                    <option value="todas">Todas las que corresponden este mes</option>
-                    <option value="spot">Solo Periódicas (AN, S1, Q) que corresponden este mes</option>
+                    <option value="todas">Todas las del mes del archivo</option>
+                    <option value="mensual">Solo Mensuales</option>
+                    <option value="semestral">Solo Semestrales (S1)</option>
+                    <option value="anual">Solo Anuales (AN)</option>
+                    <option value="trimestral">Solo Trimestrales (Q)</option>
+                    <option value="spot">Solo Spot</option>
                 </select>
             </div>
             <p class="dz-secondary" id="periodicityNote" style="margin-top:-6px;"></p>
@@ -382,6 +385,7 @@
           btnReset = $('btnReset');
 
     let currentFile = null, parsedQuotes = [], zipBlob = null, zipName = 'cotizaciones.zip';
+    let fileYM = null, fileWarnings = [];
 
     // --- Drag & Drop ---
     ['dragenter','dragover'].forEach(ev => dropZone.addEventListener(ev, e => { e.preventDefault(); dropZone.classList.add('dragover'); }));
@@ -429,29 +433,61 @@
                     throw new Error('Faltan columnas CLIENTE o Cotización ID en la fila 4');
 
                 const idx = {
+                    fec: h.indexOf('FECHA FACTURACION'),
                     cli: h.indexOf('CLIENTE'), cot: h.indexOf('Cotización ID'),
                     tar: h.indexOf('TARIFA MENSUAL'), mon: h.indexOf('MONEDA'),
                     det: h.indexOf('Detalle'), cob: h.indexOf('COBRO ASOCIADO'),
-                    itm: h.indexOf('ITEM COBRADO'), ema: h.indexOf('Correo')
+                    itm: h.indexOf('ITEM COBRADO'), ema: h.indexOf('Correo'),
+                    obs: h.indexOf('OBS'), tip: h.indexOf('TIPO DE COBRO')
                 };
+
+                // Mes del archivo = moda de FECHA FACTURACION (columna A): el archivo manda
+                fileWarnings = [];
+                const freq = {};
+                for (let i = 4; i < rows.length; i++) {
+                    const r = rows[i];
+                    if (!r || !r[idx.cli]) continue;
+                    const d = idx.fec !== -1 ? excelDate(r[idx.fec]) : null;
+                    if (d) { const k = d.getUTCFullYear() * 100 + d.getUTCMonth() + 1; freq[k] = (freq[k] || 0) + 1; }
+                }
+                const top = Object.entries(freq).sort((a, b) => b[1] - a[1])[0];
+                if (top) {
+                    fileYM = { y: Math.floor(+top[0] / 100), m: +top[0] % 100 };
+                } else {
+                    const d = new Date();
+                    fileYM = { y: d.getFullYear(), m: d.getMonth() + 1 };
+                    fileWarnings.push('No se pudo leer FECHA FACTURACION (columna A); se asume el mes actual.');
+                }
 
                 const groups = {};
                 for (let i = 4; i < rows.length; i++) {
                     const r = rows[i];
                     if (!r || !r[idx.cli]) continue;
                     const cli = r[idx.cli].toString().trim();
-                    const cot = (r[idx.cot]||'').toString().trim();
-                    if (!cot || /^(no aplica|n\/a)$/i.test(cot)) continue;
+                    const cotRaw = (r[idx.cot]||'').toString();
+                    const cot = cotRaw.replace(/\s+/g, '').toUpperCase();
+                    if (!cot || /^(NOAPLICA|N\/A)$/.test(cot)) continue;
+                    if (cot !== cotRaw) fileWarnings.push(`Cotización ID normalizado en ${cli}: "${cotRaw.trim()}" → "${cot}"`);
+
+                    // Fila con fecha de otro mes dentro del archivo → excluida (residuo de edición manual)
+                    const fRow = idx.fec !== -1 ? excelDate(r[idx.fec]) : null;
+                    if (fRow && (fRow.getUTCFullYear() !== fileYM.y || fRow.getUTCMonth() + 1 !== fileYM.m)) {
+                        fileWarnings.push(`Fila excluida por fecha fuera del mes del archivo: ${cli} ${cot} (${fRow.toISOString().slice(0, 10)})`);
+                        continue;
+                    }
 
                     const key = cli + '::' + cot;
                     if (!groups[key]) {
                         const m = maestro[cli.toLowerCase()] || {};
                         groups[key] = {
-                            cliente: cli, cotizacionId: cot, items: [],
+                            cliente: cli, cotizacionId: cot, items: [], obsVals: [], tipos: [],
                             solicitadoPor: m.solicitadoPor || '',
                             correo: m.correo || (idx.ema !== -1 && r[idx.ema] ? r[idx.ema].toString().trim() : '')
                         };
                     }
+                    const obsV = idx.obs !== -1 && r[idx.obs] ? r[idx.obs].toString().trim() : '';
+                    if (obsV && !groups[key].obsVals.includes(obsV)) groups[key].obsVals.push(obsV);
+                    groups[key].tipos.push(idx.tip !== -1 && r[idx.tip] ? r[idx.tip].toString().trim() : '');
                     const raw = r[idx.tar];
                     const tarifa = typeof raw === 'number' ? raw : parseFloat(raw) || 0;
                     const moneda = (r[idx.mon]||'UF').toString().trim().toUpperCase();
@@ -472,7 +508,10 @@
                         name: g.cliente, cotizacionId: g.cotizacionId,
                         solicitadoPor: g.solicitadoPor || 'No especificado',
                         correo: g.correo || 'No especificado',
-                        itemCount: g.items.length, totalUF: tUF, totalUSD: tUSD, items: g.items
+                        itemCount: g.items.length, totalUF: tUF, totalUSD: tUSD, items: g.items,
+                        periodicidad: clasificar(g.cotizacionId),
+                        mesesObs: mesesDesdeObs(g.obsVals),
+                        tipoSpot: g.tipos.length > 0 && g.tipos.every(t => /^spot$/i.test(t))
                     };
                 }).sort((a,b) => a.name.localeCompare(b.name));
 
@@ -490,12 +529,16 @@
         previewBody.innerHTML = '';
         const quotes = applyFilter(parsedQuotes);
 
-        const excluidas = parsedQuotes.filter(q => !esMesDeEnvio(q.cotizacionId, new Date()));
+        const ml = $('monthLabel');
+        if (ml && fileYM) ml.textContent = '— ' + MESES_ES[fileYM.m - 1] + ' ' + fileYM.y;
+
+        const excluidas = parsedQuotes.map(q => ({ q, c: correspondeAlMes(q) })).filter(e => !e.c.ok);
         const nota = $('periodicityNote');
         if (nota) {
-            nota.textContent = excluidas.length
-                ? `${excluidas.length} cotización(es) periódica(s) no corresponden este mes y quedaron excluidas: ${excluidas.map(q => `${q.name} (${q.cotizacionId})`).join(', ')}`
-                : '';
+            const partes = [];
+            excluidas.forEach(e => partes.push(`⛔ ${e.q.name} (${e.q.cotizacionId}): ${e.c.motivo}`));
+            [...new Set(fileWarnings)].forEach(w => partes.push('⚠️ ' + w));
+            nota.innerHTML = partes.join('<br>');
         }
 
         if (!quotes.length) {
@@ -562,8 +605,6 @@
             return body;
         };
 
-        // Solo incluir tabla USD si hay ítems en USD
-        const totalUSD = usd.reduce((a,c) => a + c.tarifa, 0);
         const contentBlocks = [
             // Header: cotización + logo
             { columns: [
@@ -581,12 +622,13 @@
                 [{ text:'Solicitado por', bold:true, fontSize:10, style:'metaLabel' }, { text:q.solicitadoPor, fontSize:10, style:'metaVal' }],
                 [{ text:'Correo',        bold:true, fontSize:10, style:'metaLabel' }, { text:q.correo,         fontSize:10, style:'metaVal' }]
             ]}, margin:[0,0,0,22] },
-            // Tabla UF
-            { table: { widths:[55,'*',100], body: tbl(uf,'UF') }, margin:[0,0,0, totalUSD > 0 ? 22 : 28] },
         ];
 
-        // Tabla USD: solo si hay ítems
-        if (totalUSD > 0) {
+        // Solo se muestran las tablas de las monedas con ítems: UF arriba, USD abajo
+        if (uf.length > 0) {
+            contentBlocks.push({ table: { widths:[55,'*',100], body: tbl(uf,'UF') }, margin:[0,0,0, usd.length > 0 ? 22 : 28] });
+        }
+        if (usd.length > 0) {
             contentBlocks.push({ table: { widths:[55,'*',100], body: tbl(usd,'USD') }, margin:[0,0,0,28] });
         }
 
@@ -612,50 +654,87 @@
 
     const filterMode = $('filterMode');
 
-    // --- Periodicidad de cotizaciones (sufijo de "Cotización ID": COT-YYYY-<codigo>) ---
-    //   01-12 → mensual: siempre corresponde (el Excel ya es la ingesta de ese mes)
-    //   AN    → anual: solo corresponde en enero
-    //   S1    → semestral: corresponde en enero y julio
-    //   Q     → trimestral: corresponde en enero, abril, julio y octubre
-    const MESES_POR_CODIGO = { AN: [1], S1: [1, 7], Q: [1, 4, 7, 10] };
+    // --- Utilidades de fecha y mes ---
+    const MESES_ES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+    const MES_ABREV = { ene:1, feb:2, mar:3, abr:4, may:5, jun:6, jul:7, ago:8, sep:9, sept:9, oct:10, nov:11, dic:12, dec:12 };
 
-    function codigoDeCotizacion(cotizacionId) {
-        const m = /^COT-\d{4}-([A-Za-z0-9]+)$/i.exec((cotizacionId || '').trim());
-        return m ? m[1].toUpperCase() : null;
+    // Convierte fechas de Excel (Date, serial numérico o texto) a Date (en UTC)
+    function excelDate(v) {
+        if (v instanceof Date) return v;
+        if (typeof v === 'number' && v > 20000) return new Date(Math.round((v - 25569) * 86400000));
+        if (typeof v === 'string' && v.trim()) { const d = new Date(v); return isNaN(d) ? null : d; }
+        return null;
     }
 
-    // Código desconocido o formato no reconocido: no se bloquea (se deja pasar) para no ocultar datos raros.
-    function esMesDeEnvio(cotizacionId, mesRef) {
-        const code = codigoDeCotizacion(cotizacionId);
-        if (!code || /^\d{2}$/.test(code)) return true;
-        const meses = MESES_POR_CODIGO[code];
-        return meses ? meses.includes(mesRef.getMonth() + 1) : true;
+    // --- Periodicidad (sufijo de "Cotización ID" + OBS por cliente) ---
+    //   01-12 → mensual (debe coincidir con el mes del archivo)
+    //   AN    → anual: factura en enero
+    //   S1/Sx → semestral: meses según OBS del cliente (ej. "ene-jul", "jun-dec"); si no hay, ene/jul
+    //   Q/Qx  → trimestral: meses según OBS; si no hay, ene/abr/jul/oct
+    function sufijoCot(cotId) {
+        const m = /^COT-(\d{4})-(.+)$/.exec(cotId || '');
+        return m ? { anio: +m[1], suf: m[2] } : null;
+    }
+    function clasificar(cotId) {
+        const p = sufijoCot(cotId);
+        if (!p) return 'otro';
+        if (/^\d{2}$/.test(p.suf)) return 'mensual';
+        if (p.suf === 'AN') return 'anual';
+        if (/^S\d*$/.test(p.suf)) return 'semestral';
+        if (/^Q\d*$/.test(p.suf)) return 'trimestral';
+        return 'otro';
+    }
+    // OBS tipo "ene-jul" / "jun-dec" → meses de facturación propios de ese cliente
+    function mesesDesdeObs(obsVals) {
+        for (const o of obsVals || []) {
+            const m = /^([a-zá-ú]{3,4})\s*-\s*([a-zá-ú]{3,4})$/i.exec(String(o).trim());
+            if (m) {
+                const a = MES_ABREV[m[1].toLowerCase()], b = MES_ABREV[m[2].toLowerCase()];
+                if (a && b) return [a, b];
+            }
+        }
+        return null;
+    }
+    // ¿Esta cotización corresponde al mes del archivo? (código desconocido → pasa, nunca se oculta en silencio)
+    function correspondeAlMes(q) {
+        if (!fileYM) return { ok: true };
+        const mm = fileYM.m, p = sufijoCot(q.cotizacionId);
+        switch (q.periodicidad) {
+            case 'mensual': {
+                if (p.anio !== fileYM.y) return { ok: false, motivo: `es del año ${p.anio}, el archivo es ${fileYM.y}` };
+                if (+p.suf !== mm) return { ok: false, motivo: `es del mes ${p.suf}, el archivo es de ${MESES_ES[mm - 1]}` };
+                return { ok: true };
+            }
+            case 'anual':
+                return mm === 1 ? { ok: true } : { ok: false, motivo: 'anual (AN): factura en Enero' };
+            case 'semestral': {
+                const meses = q.mesesObs || [1, 7];
+                return meses.includes(mm) ? { ok: true }
+                    : { ok: false, motivo: `semestral: factura en ${meses.map(x => MESES_ES[x - 1]).join(' y ')}` };
+            }
+            case 'trimestral': {
+                const meses = q.mesesObs || [1, 4, 7, 10];
+                return meses.includes(mm) ? { ok: true }
+                    : { ok: false, motivo: `trimestral: factura en ${meses.map(x => MESES_ES[x - 1]).join(', ')}` };
+            }
+            default:
+                return { ok: true };
+        }
     }
 
-    // Función que aplica el filtro seleccionado
+    // Función que aplica el filtro seleccionado (siempre sobre las que corresponden al mes del archivo)
     function applyFilter(quotes) {
-        const mode = filterMode ? filterMode.value : 'mensual';
-        // Mensual: COT-YYYY-MM → mes como número de 2 dígitos (01-12)
-        const isMensual = id => /^COT-\d{4}-(0[1-9]|1[0-2])$/i.test(id);
-        const debidasEsteMes = quotes.filter(q => esMesDeEnvio(q.cotizacionId, new Date()));
-        if (mode === 'mensual') return debidasEsteMes.filter(q => isMensual(q.cotizacionId));
-        if (mode === 'spot')    return debidasEsteMes.filter(q => !isMensual(q.cotizacionId));
-        return debidasEsteMes; // todas las que corresponden este mes
+        const mode = filterMode ? filterMode.value : 'todas';
+        const delMes = quotes.filter(q => correspondeAlMes(q).ok);
+        if (mode === 'todas') return delMes;
+        if (mode === 'spot')  return delMes.filter(q => q.tipoSpot || q.periodicidad === 'otro');
+        return delMes.filter(q => q.periodicidad === mode);
     }
 
     // Refrescar preview cuando cambia el filtro
     filterMode && filterMode.addEventListener('change', () => {
         if (parsedQuotes.length) renderPreview();
     });
-
-    // Deriva el mes (YYYY-MM) del ID de cotización mensual (COT-YYYY-MM); si no calza el patrón
-    // (cotizaciones spot/proyecto), usa el mes en curso como carpeta de archivo.
-    function mesDeCotizacion(cotizacionId) {
-        const m = /^COT-(\d{4})-(0[1-9]|1[0-2])$/i.exec(cotizacionId);
-        if (m) return `${m[1]}-${m[2]}`;
-        const d = new Date();
-        return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
-    }
 
     btnGenerate.addEventListener('click', async () => {
         if (!parsedQuotes.length) return;
@@ -683,11 +762,14 @@
                     });
                 });
 
+                const mm2 = String(fileYM.m).padStart(2, '0');
                 manifest.push({
                     cliente: q.name,
                     cotizacionId: q.cotizacionId,
                     correo: q.correo,
-                    mes: mesDeCotizacion(q.cotizacionId),
+                    mes: `${fileYM.y}-${mm2}`,
+                    anio: String(fileYM.y),
+                    mesCarpeta: `${mm2}. ${MESES_ES[fileYM.m - 1]}`,
                     archivo
                 });
 
@@ -731,6 +813,9 @@
 
     function reset() {
         currentFile = null; parsedQuotes = []; zipBlob = null;
+        fileYM = null; fileWarnings = [];
+        const ml = $('monthLabel'); if (ml) ml.textContent = '';
+        const nota = $('periodicityNote'); if (nota) nota.innerHTML = '';
         fileInput.value = ''; fileName.textContent = '';
         dropZone.classList.remove('hidden');
         fileBar.classList.add('hidden');
