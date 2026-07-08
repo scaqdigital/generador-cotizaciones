@@ -1,33 +1,48 @@
 <!DOCTYPE html>
 <html lang="es">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Generador de Cotizaciones — ScaleAQ</title>
-    <meta name="description" content="Genera cotizaciones PDF a partir de tu Excel mensual. Procesamiento local seguro en tu navegador.">
+    <meta name="description"
+        content="Genera cotizaciones PDF a partir de tu Excel mensual. Procesamiento local seguro en tu navegador.">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@500;600;700;800&display=swap" rel="stylesheet">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@500;600;700;800&display=swap"
+        rel="stylesheet">
     <style>
         :root {
             --primary: #031E40;
             --secondary: #FF6B00;
             --bg: #0a0f1a;
-            --bg-card: rgba(255,255,255,0.04);
-            --bg-card-hover: rgba(255,255,255,0.07);
-            --surface: rgba(255,255,255,0.06);
-            --surface-border: rgba(255,255,255,0.08);
+            --bg-card: rgba(255, 255, 255, 0.04);
+            --bg-card-hover: rgba(255, 255, 255, 0.07);
+            --surface: rgba(255, 255, 255, 0.06);
+            --surface-border: rgba(255, 255, 255, 0.08);
             --text: #e8ecf1;
             --text-dim: #8a95a8;
             --success: #34d399;
             --error: #f87171;
-            --glow-orange: rgba(255,107,0,0.15);
-            --glow-blue: rgba(59,130,246,0.1);
+            --glow-orange: rgba(255, 107, 0, 0.15);
+            --glow-blue: rgba(59, 130, 246, 0.1);
             --radius: 16px;
             --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         }
-        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-        html { scroll-behavior: smooth; }
+
+        *,
+        *::before,
+        *::after {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        html {
+            scroll-behavior: smooth;
+        }
+
         body {
             font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
             background: var(--bg);
@@ -41,8 +56,10 @@
             position: relative;
             overflow-x: hidden;
         }
+
         /* Ambient gradient orbs */
-        body::before, body::after {
+        body::before,
+        body::after {
             content: '';
             position: fixed;
             border-radius: 50%;
@@ -50,205 +67,442 @@
             z-index: 0;
             pointer-events: none;
         }
+
         body::before {
-            width: 600px; height: 600px;
-            top: -200px; left: -150px;
-            background: radial-gradient(circle, rgba(255,107,0,0.08) 0%, transparent 70%);
+            width: 600px;
+            height: 600px;
+            top: -200px;
+            left: -150px;
+            background: radial-gradient(circle, rgba(255, 107, 0, 0.08) 0%, transparent 70%);
         }
+
         body::after {
-            width: 500px; height: 500px;
-            bottom: -150px; right: -100px;
-            background: radial-gradient(circle, rgba(3,30,64,0.25) 0%, transparent 70%);
+            width: 500px;
+            height: 500px;
+            bottom: -150px;
+            right: -100px;
+            background: radial-gradient(circle, rgba(3, 30, 64, 0.25) 0%, transparent 70%);
         }
-        .app { width: 100%; max-width: 920px; display: flex; flex-direction: column; gap: 20px; position: relative; z-index: 1; }
+
+        .app {
+            width: 100%;
+            max-width: 920px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            position: relative;
+            z-index: 1;
+        }
 
         /* Header */
         .header {
-            display: flex; align-items: center; gap: 16px; padding: 4px 0;
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            padding: 4px 0;
         }
+
         .logo-box {
-            width: 56px; height: 56px;
+            width: 56px;
+            height: 56px;
             background: linear-gradient(135deg, var(--primary), #0d2c54);
             border-radius: 14px;
-            display: flex; align-items: center; justify-content: center;
-            box-shadow: 0 4px 20px rgba(3,30,64,0.4);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 4px 20px rgba(3, 30, 64, 0.4);
             flex-shrink: 0;
         }
-        .logo-box svg { width: 38px; height: 38px; }
+
+        .logo-box svg {
+            width: 38px;
+            height: 38px;
+        }
+
         .header-text h1 {
             font-family: 'Outfit', sans-serif;
             font-size: clamp(20px, 4vw, 26px);
             font-weight: 700;
             background: linear-gradient(135deg, #fff 0%, #c8d4e0 100%);
-            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
             background-clip: text;
         }
-        .header-text p { font-size: 13px; color: var(--text-dim); }
+
+        .header-text p {
+            font-size: 13px;
+            color: var(--text-dim);
+        }
 
         /* Card */
         .card {
             background: var(--bg-card);
-            backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px);
+            backdrop-filter: blur(24px);
+            -webkit-backdrop-filter: blur(24px);
             border: 1px solid var(--surface-border);
             border-radius: 20px;
             padding: 32px;
-            display: flex; flex-direction: column; gap: 28px;
-            box-shadow: 0 8px 40px rgba(0,0,0,0.2);
+            display: flex;
+            flex-direction: column;
+            gap: 28px;
+            box-shadow: 0 8px 40px rgba(0, 0, 0, 0.2);
         }
 
         /* Drop zone */
         .drop-zone {
-            border: 2px dashed rgba(255,255,255,0.1);
+            border: 2px dashed rgba(255, 255, 255, 0.1);
             border-radius: var(--radius);
             padding: 48px 20px;
             text-align: center;
             cursor: pointer;
-            background: rgba(255,255,255,0.015);
+            background: rgba(255, 255, 255, 0.015);
             transition: var(--transition);
             position: relative;
         }
-        .drop-zone:hover, .drop-zone.dragover {
+
+        .drop-zone:hover,
+        .drop-zone.dragover {
             border-color: var(--secondary);
             background: var(--glow-orange);
-            box-shadow: inset 0 0 60px rgba(255,107,0,0.04);
+            box-shadow: inset 0 0 60px rgba(255, 107, 0, 0.04);
         }
+
         .dz-icon {
-            width: 44px; height: 44px;
+            width: 44px;
+            height: 44px;
             margin: 0 auto 14px;
             color: var(--text-dim);
             transition: var(--transition);
         }
-        .drop-zone:hover .dz-icon { color: var(--secondary); transform: translateY(-3px); }
-        .dz-primary { font-size: 15px; font-weight: 600; color: var(--text); margin-bottom: 4px; }
-        .dz-secondary { font-size: 13px; color: var(--text-dim); }
-        .file-input { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+
+        .drop-zone:hover .dz-icon {
+            color: var(--secondary);
+            transform: translateY(-3px);
+        }
+
+        .dz-primary {
+            font-size: 15px;
+            font-weight: 600;
+            color: var(--text);
+            margin-bottom: 4px;
+        }
+
+        .dz-secondary {
+            font-size: 13px;
+            color: var(--text-dim);
+        }
+
+        .file-input {
+            position: absolute;
+            inset: 0;
+            opacity: 0;
+            cursor: pointer;
+        }
 
         /* File info bar */
         .file-bar {
-            display: flex; align-items: center; justify-content: space-between;
-            background: rgba(255,107,0,0.06);
-            border: 1px solid rgba(255,107,0,0.12);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: rgba(255, 107, 0, 0.06);
+            border: 1px solid rgba(255, 107, 0, 0.12);
             padding: 12px 18px;
             border-radius: 10px;
-            font-weight: 500; font-size: 14px;
+            font-weight: 500;
+            font-size: 14px;
             color: var(--secondary);
         }
+
         .file-bar .x {
-            background: none; border: none; font-size: 20px;
-            color: var(--text-dim); cursor: pointer; line-height: 1;
+            background: none;
+            border: none;
+            font-size: 20px;
+            color: var(--text-dim);
+            cursor: pointer;
+            line-height: 1;
             transition: var(--transition);
         }
-        .file-bar .x:hover { color: var(--error); }
+
+        .file-bar .x:hover {
+            color: var(--error);
+        }
 
         /* Preview */
-        .preview { display: flex; flex-direction: column; gap: 14px; animation: fadeUp .4s ease; }
-        .section-head { display: flex; align-items: center; justify-content: space-between; }
-        .section-head h2 { font-family: 'Outfit', sans-serif; font-size: 17px; font-weight: 600; color: var(--text); }
+        .preview {
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+            animation: fadeUp .4s ease;
+        }
+
+        .section-head {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .section-head h2 {
+            font-family: 'Outfit', sans-serif;
+            font-size: 17px;
+            font-weight: 600;
+            color: var(--text);
+        }
+
         .pill {
-            background: rgba(255,107,0,0.1);
+            background: rgba(255, 107, 0, 0.1);
             color: var(--secondary);
             padding: 4px 12px;
             border-radius: 20px;
-            font-size: 12px; font-weight: 600;
+            font-size: 12px;
+            font-weight: 600;
         }
+
         .tbl-wrap {
-            max-height: 320px; overflow-y: auto;
+            max-height: 320px;
+            overflow-y: auto;
             border: 1px solid var(--surface-border);
             border-radius: var(--radius);
         }
-        .tbl-wrap::-webkit-scrollbar { width: 6px; }
-        .tbl-wrap::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.08); border-radius: 3px; }
-        table { width: 100%; border-collapse: collapse; font-size: 13px; }
-        th, td { padding: 11px 14px; border-bottom: 1px solid rgba(255,255,255,0.04); text-align: left; }
-        th {
-            background: rgba(255,255,255,0.03);
-            font-weight: 600; color: var(--text-dim);
-            font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px;
-            position: sticky; top: 0; z-index: 2;
+
+        .tbl-wrap::-webkit-scrollbar {
+            width: 6px;
         }
-        td { color: var(--text); }
-        tr:hover td { background: rgba(255,255,255,0.02); }
-        td code { background: rgba(255,107,0,0.08); color: var(--secondary); padding: 2px 7px; border-radius: 4px; font-size: 12px; }
-        .client-name { font-weight: 600; color: #fff; }
-        .mono { font-variant-numeric: tabular-nums; }
+
+        .tbl-wrap::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.08);
+            border-radius: 3px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+        }
+
+        th,
+        td {
+            padding: 11px 14px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+            text-align: left;
+        }
+
+        th {
+            background: rgba(255, 255, 255, 0.03);
+            font-weight: 600;
+            color: var(--text-dim);
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            position: sticky;
+            top: 0;
+            z-index: 2;
+        }
+
+        td {
+            color: var(--text);
+        }
+
+        tr:hover td {
+            background: rgba(255, 255, 255, 0.02);
+        }
+
+        td code {
+            background: rgba(255, 107, 0, 0.08);
+            color: var(--secondary);
+            padding: 2px 7px;
+            border-radius: 4px;
+            font-size: 12px;
+        }
+
+        .client-name {
+            font-weight: 600;
+            color: #fff;
+        }
+
+        .mono {
+            font-variant-numeric: tabular-nums;
+        }
 
         /* Buttons */
         .btn {
-            display: inline-flex; align-items: center; justify-content: center; gap: 8px;
-            padding: 14px 28px; font-size: 14px; font-weight: 600;
-            border-radius: 10px; border: none; cursor: pointer;
-            transition: var(--transition); width: 100%;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            padding: 14px 28px;
+            font-size: 14px;
+            font-weight: 600;
+            border-radius: 10px;
+            border: none;
+            cursor: pointer;
+            transition: var(--transition);
+            width: 100%;
             font-family: 'Inter', sans-serif;
         }
-        .btn:disabled { opacity: .4; pointer-events: none; }
+
+        .btn:disabled {
+            opacity: .4;
+            pointer-events: none;
+        }
+
         .btn-primary {
             background: linear-gradient(135deg, var(--secondary), #e05500);
             color: #fff;
-            box-shadow: 0 4px 16px rgba(255,107,0,0.25);
+            box-shadow: 0 4px 16px rgba(255, 107, 0, 0.25);
         }
-        .btn-primary:hover { transform: translateY(-1px); box-shadow: 0 6px 24px rgba(255,107,0,0.35); }
+
+        .btn-primary:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 6px 24px rgba(255, 107, 0, 0.35);
+        }
+
         .btn-success {
             background: linear-gradient(135deg, #10b981, #059669);
             color: #fff;
-            box-shadow: 0 4px 16px rgba(16,185,129,0.25);
+            box-shadow: 0 4px 16px rgba(16, 185, 129, 0.25);
         }
-        .btn-success:hover { transform: translateY(-1px); box-shadow: 0 6px 24px rgba(16,185,129,0.35); }
+
+        .btn-success:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 6px 24px rgba(16, 185, 129, 0.35);
+        }
+
         .btn-ghost {
-            background: rgba(255,255,255,0.04);
-            border: 1px solid rgba(255,255,255,0.08);
+            background: rgba(255, 255, 255, 0.04);
+            border: 1px solid rgba(255, 255, 255, 0.08);
             color: var(--text-dim);
         }
-        .btn-ghost:hover { background: rgba(255,255,255,0.07); color: var(--text); }
-        .btn svg { width: 18px; height: 18px; }
+
+        .btn-ghost:hover {
+            background: rgba(255, 255, 255, 0.07);
+            color: var(--text);
+        }
+
+        .btn svg {
+            width: 18px;
+            height: 18px;
+        }
 
         /* Progress */
-        .progress { padding: 20px 0; animation: fadeUp .3s ease; }
-        .pbar-track { background: rgba(255,255,255,0.06); height: 6px; border-radius: 3px; overflow: hidden; margin-bottom: 14px; }
-        .pbar-fill { height: 100%; width: 0%; background: linear-gradient(90deg, var(--secondary), #fbbf24); border-radius: 3px; transition: width .3s ease; }
-        .pbar-text { font-size: 13px; color: var(--text-dim); text-align: center; font-weight: 500; }
+        .progress {
+            padding: 20px 0;
+            animation: fadeUp .3s ease;
+        }
+
+        .pbar-track {
+            background: rgba(255, 255, 255, 0.06);
+            height: 6px;
+            border-radius: 3px;
+            overflow: hidden;
+            margin-bottom: 14px;
+        }
+
+        .pbar-fill {
+            height: 100%;
+            width: 0%;
+            background: linear-gradient(90deg, var(--secondary), #fbbf24);
+            border-radius: 3px;
+            transition: width .3s ease;
+        }
+
+        .pbar-text {
+            font-size: 13px;
+            color: var(--text-dim);
+            text-align: center;
+            font-weight: 500;
+        }
 
         /* Results */
         .results {
-            text-align: center; display: flex; flex-direction: column; gap: 20px;
+            text-align: center;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
             animation: scaleIn .4s cubic-bezier(0.34, 1.56, 0.64, 1);
         }
-        .results-msg { display: flex; flex-direction: column; align-items: center; gap: 10px; }
+
+        .results-msg {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 10px;
+        }
+
         .check-circle {
-            width: 52px; height: 52px;
-            background: rgba(52,211,153,0.1);
+            width: 52px;
+            height: 52px;
+            background: rgba(52, 211, 153, 0.1);
             color: var(--success);
             border-radius: 50%;
-            display: flex; align-items: center; justify-content: center;
-            font-size: 26px; font-weight: bold;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 26px;
+            font-weight: bold;
         }
-        .results-msg h2 { font-family: 'Outfit', sans-serif; font-size: 20px; color: #fff; }
-        .results-msg p { font-size: 13px; color: var(--text-dim); max-width: 400px; }
+
+        .results-msg h2 {
+            font-family: 'Outfit', sans-serif;
+            font-size: 20px;
+            color: #fff;
+        }
+
+        .results-msg p {
+            font-size: 13px;
+            color: var(--text-dim);
+            max-width: 400px;
+        }
+
         .security-note {
-            font-size: 11px !important; color: var(--text-dim) !important;
-            background: rgba(255,255,255,0.03);
-            border: 1px solid rgba(255,255,255,0.06);
-            padding: 10px 14px; border-radius: 8px;
-            margin-top: 4px; max-width: 400px;
+            font-size: 11px !important;
+            color: var(--text-dim) !important;
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            padding: 10px 14px;
+            border-radius: 8px;
+            margin-top: 4px;
+            max-width: 400px;
         }
-        .results-btns { display: flex; flex-direction: column; gap: 10px; max-width: 300px; margin: 0 auto; width: 100%; }
+
+        .results-btns {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            max-width: 300px;
+            margin: 0 auto;
+            width: 100%;
+        }
 
         /* Footer */
-        .footer { text-align: center; font-size: 11px; color: rgba(255,255,255,0.2); padding: 8px 0; }
+        .footer {
+            text-align: center;
+            font-size: 11px;
+            color: rgba(255, 255, 255, 0.2);
+            padding: 8px 0;
+        }
 
-        .hidden { display: none !important; }
+        .hidden {
+            display: none !important;
+        }
 
         /* Filter row */
         .filter-row {
-            display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            flex-wrap: wrap;
         }
+
         .filter-select {
-            flex: 1; min-width: 220px;
-            background: rgba(255,255,255,0.04);
-            border: 1px solid rgba(255,255,255,0.1);
+            flex: 1;
+            min-width: 220px;
+            background: rgba(255, 255, 255, 0.04);
+            border: 1px solid rgba(255, 255, 255, 0.1);
             color: var(--text);
             padding: 10px 14px;
             border-radius: 10px;
-            font-size: 13px; font-weight: 500;
+            font-size: 13px;
+            font-weight: 500;
             font-family: 'Inter', sans-serif;
             cursor: pointer;
             transition: var(--transition);
@@ -258,609 +512,693 @@
             background-position: right 14px center;
             padding-right: 36px;
         }
-        .filter-select:focus { outline: none; border-color: var(--secondary); }
-        .filter-select option { background: #1a2035; color: var(--text); }
 
-        @keyframes fadeUp { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
-        @keyframes scaleIn { from { opacity: 0; transform: scale(0.94); } to { opacity: 1; transform: scale(1); } }
-        @keyframes spin { to { transform: rotate(360deg); } }
+        .filter-select:focus {
+            outline: none;
+            border-color: var(--secondary);
+        }
+
+        .filter-select option {
+            background: #1a2035;
+            color: var(--text);
+        }
+
+        @keyframes fadeUp {
+            from {
+                opacity: 0;
+                transform: translateY(12px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes scaleIn {
+            from {
+                opacity: 0;
+                transform: scale(0.94);
+            }
+
+            to {
+                opacity: 1;
+                transform: scale(1);
+            }
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
 
         @media (max-width: 640px) {
-            .card { padding: 20px; }
-            .drop-zone { padding: 32px 16px; }
-            th, td { padding: 8px 10px; font-size: 12px; }
+            .card {
+                padding: 20px;
+            }
+
+            .drop-zone {
+                padding: 32px 16px;
+            }
+
+            th,
+            td {
+                padding: 8px 10px;
+                font-size: 12px;
+            }
         }
     </style>
 </head>
+
 <body>
-<div class="app">
-    <!-- Header -->
-    <header class="header">
-        <div class="logo-box" style="background: none; box-shadow: none;">
-            <img src="data:image/jpeg;base64,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" alt="ScaleAQ Logo" style="width: 100%; height: 100%; object-fit: contain; border-radius: 14px;">
-        </div>
-        <div class="header-text">
-            <h1>Generador de Cotizaciones</h1>
-            <p></p>
-        </div>
-    </header>
+    <div class="app">
+        <!-- Header -->
+        <header class="header">
+            <div class="logo-box" style="background: none; box-shadow: none;">
+                <img src="data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/7QCEUGhvdG9zaG9wIDMuMAA4QklNBAQAAAAAAGgcAigAYkZCTUQwYTAwMGFiNzAxMDAwMGFkMDIwMDAwNzcwMzAwMDBkYjAzMDAwMDNkMDQwMDAwYmYwNTAwMDA1NzA3MDAwMGIwMDcwMDAwMGQwODAwMDA1NjA4MDAwMGQzMDkwMDAwAP/bAIQABQYGCwgLCwsLCw0LCwsNDg4NDQ4ODw0ODg4NDxAQEBEREBAQEA8TEhMPEBETFBQTERMWFhYTFhUVFhkWGRYWEgEFBQUKBwoICQkICwgKCAsKCgkJCgoMCQoJCgkMDQsKCwsKCw0MCwsICwsMDAwNDQwMDQoLCg0MDQ0MExQTExOc/8IAEQgAlgCWAwEiAAIRAQMRAf/EAIIAAQEAAgMBAAAAAAAAAAAAAAAHBQYBAgMEEAABAwICBQkDBw0AAAAAAAABAAIRAxIEIQUxQVFhExQgIjJxkbHRcIGhFTM0QEJQwRAjMDVDcoKSorLC4fARAAICAQMDAwMEAwAAAAAAAAERACExQVFhcYGRECChcMHwQFCx4TDR8f/aAAwDAQACAAMAAAABlwyHwgAAAAAAAKjLqiS4AAAAAAAACoy6okuAAAAAAAAAqMuqJLgHbZ+OdWZz34a4zP2mss38HL4zZzWGd+YxbavPjnWR26qjLqiS4H32SPb54+vf7cBlevbRLBNPHt1oOEwH18c6dcNAzRpXP24jz99l76z9uOyut8duub19UZdUeesuABsnyYbjr2yvzfI8vfY/XVnr4bJxrg2LzwI2/V/DkDt1VGXVElwAAAAAAAAFRl1RJcAAAAAAAABUZdUSXAAAAAAAAAVGXVElyoiXKiJcqIlyoiXKiJcqIlyoiXKiJcqIl1ROH//aAAgBAQABBQL2DgSvknEqtgK1EM0ZiHivgqtAN0XiCK2BrUQaLwxDRWIKrYCtRbQwlSuvknEp2i8Q0dHDmKlhWkMLUt0zi6tGoa9Su99B7Exz3UG/q6kJc+g9ixmIfUdhKxpI4uujiarkRHRwzqbX8+wKxek2OpnSuHqrFYmg52k8W3FVMHjW0qOC0iynTxOMwzmu0rhqqx2Iw9RrMRYwV8m1KSJnpuwrQzFYcUn8iJLIa3Bgg4LPmYt5p1uaiRhgRzFkvbafY3//2gAIAQMAAT8B+vwrTuUHcoUKFad3QYVIzzQdE7Vd5FNgbVhbL5qEWgE5gmTugOYZ/iVIYd5y5PO0uD31G2tt69mfbmciSnazGrZ0JG5OqsMxSiZ+0TEx5avepG5SNyngifuv/9oACAECAAE/Afr5MK4b1cN6lEwp4q4bx0Hjh8AoOUidaLZjKPcrfMJ0mMvJV7rIYDJIGwRxza4R7lUNZo+3lcGlrWGXT1bsuzEZgBDj0I4oU3ZTUnVsGceqg71HFRxQ+6//2gAIAQEABj8C9g8DWV80fFvqrnstHePVSKZg9w8ypey0HLWFPJHxA/FXPYQN+R8kKlvUJieP5J5I+IH4q57IHePVHk23Rr1bV838W+qJNPIcW+vSYbrM+1rjivp/9iZU5fl2Bw3ZSY2ZJoY8tFk/Epl7ycxHCSodji08QwLFtqP5W2YdlHZlH97/ADTRq6wz9662OLe8MCLTVNRjTkTlPGEYqmnO4TqTba5IcY1D0RZzgknKI6QNUFzNw2r6N/S31XJUafJtmdmwzqHFA1qFzwI2FUzSp2WmXZDPMIPaCOrGfeVXpO/aAweMQjSq072TP/TxX5qjY8EEGBsPegatCXxuBQFGlyZnPIavFQNcpu8OlF+d279BffsBjKetAHxu8FaDPH3rXl/uECqZvAuIu1dUO7O3ht3hRJm1rrcpEugzsyGfmpvHbjZ2Lrbt+v4ItF0gAgGJPWjYd2abmSxz3NuEZdaB4605wOTb51ZWtlv8xyTBf2gZ1bGB34wiNx9jn//aAAgBAQEBPyH6DnMAJIgBZJOBASAzPIDbZxgjBNcMElg6AMHHghYynoSdIHAg3ZXgtO2ywOrFd4UBMBpTTjv6CwCDuV4LQoMGQG2zjBGbXXIFZZI2M5shQIASTpCz7j4MQNQ3S4gP+f3jQILIKBBgxK6OocOOTAFlWoOgg8LqI7CwKELUA0Q8EiDIpEDEFBL8Bn4/CEDFiEbCQvtCSIJogu5mMBiB0FbriBjrLFjQ6O5l9bghGMqYJN1YxGCNq8e0QEN5i0dit7nIhF6xNpwGbCS4PMMBQuxJBTtQj8cYUIME7HzAgAAqtgmhO8EAWlBhqj8XHtpCRyWiE5AuaRtnVmhGOXEAJTrYkgpnaJULkhoaotYbmtoEKBFV8xgEF+MwAgAAyxyTtpGCdy/PvTb1eIGdonYAdY4YdC1sNgF56wUdIIsZsg2LJ/2R9oQhAgPMElZngDszA1gJpWxQ/YcBc0WeQ0yIfJhZOESkaAMmQwL8VcTfC6A3lU8MQmFwtoTL3A+LjBjLKMiorBJos68TM1gvNHt9HP/aAAwDAQECAQMBAAAQBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBJLPBANEBBBrDT/reTgBBBVRt9/aBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBD/9oACAEDAQE/EP14I4BPQTkeJzPEJDQ+ICOAT0j4ReynI8H2CAsgdzNIrVzUnrXMQ65B0l0L8qW8O49AOEKCcMPhsnFk3ETkD2aez+BBwBUpsCIHwIceqRY4F+1//9oACAECAQE/EP14ciB1Kmoi3c1E8wAcEeYDIgdSoqaLd1P+0PY7V5P59Knc30b+qtPGam9BJiv/AIjoalfX2gv9kj+3b9vIP//aAAgBAQEBPxD6DgsoDEgQALJJoCBHk3EZeTae0S+Ihhu8rMGgHSoV81VtIsYUSqqVA7hB3EvjoBYkcNbaRqgOe4CSsqKo9PRVCseQAB3EPjYHcUCuDxLwaf8ANDaHoZwxJsBZrx7huAENmrKNr4gZiexMzAiU0E+7He44RBqivSDB1LjqpswQQ3YKG11zE1ECbrYkDUgmrXPnXogUCrcqIq+SIJKS3SmYGxD83GhBxODqbPymEI5I/wAHtbd0jQq2XfY9KRDNKrcmZAQ0RaUA3vtcFRc1y2KJptdQi3+OIBXXP4cMKIx9xw+wpsodgNIAg8r9Bc4U5NUIhW8E4Ip0IuuyjMQckxjHWpoBKDZCBSj/AHXWqOXJPI/f8/LACIugZ00OkkJguEMtdZVAMkZsdoKBEnoP+pmPPlE8iCvCBwvJMb2ZYgDR9sG/UbAdJXorYE/DX180MugJlMwJAMgjod8YSNDAgtBfQLq3Yf4FF6qIbRRDYRRRfQr/2Q=="
+                    alt="ScaleAQ Logo" style="width: 100%; height: 100%; object-fit: contain; border-radius: 14px;">
+            </div>
+            <div class="header-text">
+                <h1>Generador de Cotizaciones</h1>
+                <p></p>
+            </div>
+        </header>
 
-    <!-- Main Card -->
-    <main class="card">
-        <!-- Step 1: Upload -->
-        <section id="uploadSection">
-            <div class="drop-zone" id="dropZone">
-                <div class="dz-icon">
-                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="44" height="44">
-                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-                        <polyline points="17 8 12 3 7 8"/>
-                        <line x1="12" y1="3" x2="12" y2="15"/>
-                    </svg>
+        <!-- Main Card -->
+        <main class="card">
+            <!-- Step 1: Upload -->
+            <section id="uploadSection">
+                <div class="drop-zone" id="dropZone">
+                    <div class="dz-icon">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="44" height="44">
+                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                            <polyline points="17 8 12 3 7 8" />
+                            <line x1="12" y1="3" x2="12" y2="15" />
+                        </svg>
+                    </div>
+                    <p class="dz-primary">Arrastra el archivo Excel mensual aquí</p>
+                    <p class="dz-secondary">o haz clic para buscarlo en tu equipo</p>
+                    <input type="file" id="fileInput" accept=".xlsx,.xls" class="file-input">
                 </div>
-                <p class="dz-primary">Arrastra el archivo Excel mensual aquí</p>
-                <p class="dz-secondary">o haz clic para buscarlo en tu equipo</p>
-                <input type="file" id="fileInput" accept=".xlsx,.xls" class="file-input">
-            </div>
-            <div class="file-bar hidden" id="fileBar">
-                <span id="fileName"></span>
-                <button class="x" id="btnClear" title="Quitar">&times;</button>
-            </div>
-        </section>
+                <div class="file-bar hidden" id="fileBar">
+                    <span id="fileName"></span>
+                    <button class="x" id="btnClear" title="Quitar">&times;</button>
+                </div>
+            </section>
 
-        <!-- Step 2: Preview -->
-        <section class="preview hidden" id="previewSection">
-            <div class="section-head">
-                <h2>Facturación Detectada <span id="monthLabel" style="color:var(--secondary);font-size:15px;font-weight:600;"></span></h2>
-                <span class="pill" id="clientCount">0 cotizaciones</span>
-            </div>
-            <div class="tbl-wrap">
-                <table>
-                    <thead><tr><th>Cliente</th><th>Cotización Nº</th><th>Ítems</th><th>Total UF</th><th>Total USD</th></tr></thead>
-                    <tbody id="previewBody"></tbody>
-                </table>
-            </div>
-            <div class="filter-row">
-                <label for="filterMode" style="font-size:13px;color:var(--text-dim);font-weight:500;">Tipo de cotización a generar:</label>
-                <select id="filterMode" class="filter-select">
-                    <option value="todas">Todas las del mes del archivo</option>
-                    <option value="mensual">Solo Mensuales</option>
-                    <option value="semestral">Solo Semestrales (S1)</option>
-                    <option value="anual">Solo Anuales (AN)</option>
-                    <option value="trimestral">Solo Trimestrales (Q)</option>
-                    <option value="spot">Solo Spot</option>
-                </select>
-            </div>
-            <p class="dz-secondary" id="periodicityNote" style="margin-top:-6px;"></p>
-            <button class="btn btn-primary" id="btnGenerate" disabled>
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
-                Generar Todas las Cotizaciones
-            </button>
-        </section>
-
-        <!-- Step 3: Progress -->
-        <section class="progress hidden" id="progressSection">
-            <div class="pbar-track"><div class="pbar-fill" id="progressBar"></div></div>
-            <p class="pbar-text" id="progressText">Inicializando...</p>
-        </section>
-
-        <!-- Step 4: Results -->
-        <section class="results hidden" id="resultsSection">
-            <div class="results-msg">
-                <div class="check-circle">✓</div>
-                <h2>¡Cotizaciones Generadas!</h2>
-                <p>Todas las cotizaciones fueron creadas con el formato corporativo ScaleAQ.</p>
-                <p class="security-note">🔒 Todo se procesó en tu navegador. Tus datos nunca salieron de tu equipo.</p>
-            </div>
-            <div class="results-btns">
-                <button class="btn btn-success" id="btnDownload">
-                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-                    Descargar Lote OneDrive (.json)
+            <!-- Step 2: Preview -->
+            <section class="preview hidden" id="previewSection">
+                <div class="section-head">
+                    <h2>Facturación Detectada <span id="monthLabel"
+                            style="color:var(--secondary);font-size:15px;font-weight:600;"></span></h2>
+                    <span class="pill" id="clientCount">0 cotizaciones</span>
+                </div>
+                <div class="tbl-wrap">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Cliente</th>
+                                <th>Cotización Nº</th>
+                                <th>Ítems</th>
+                                <th>Total UF</th>
+                                <th>Total USD</th>
+                            </tr>
+                        </thead>
+                        <tbody id="previewBody"></tbody>
+                    </table>
+                </div>
+                <div class="filter-row">
+                    <label for="filterMode" style="font-size:13px;color:var(--text-dim);font-weight:500;">Tipo de
+                        cotización a generar:</label>
+                    <select id="filterMode" class="filter-select">
+                        <option value="todas">Todas las del mes del archivo</option>
+                        <option value="mensual">Solo Mensuales</option>
+                        <option value="semestral">Solo Semestrales (S1)</option>
+                        <option value="anual">Solo Anuales (AN)</option>
+                        <option value="trimestral">Solo Trimestrales (Q)</option>
+                        <option value="spot">Solo Spot</option>
+                    </select>
+                </div>
+                <p class="dz-secondary" id="periodicityNote" style="margin-top:-6px;"></p>
+                <button class="btn btn-primary" id="btnGenerate" disabled>
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                        stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                        <polyline points="14 2 14 8 20 8" />
+                        <line x1="16" y1="13" x2="8" y2="13" />
+                        <line x1="16" y1="17" x2="8" y2="17" />
+                    </svg>
+                    Generar Todas las Cotizaciones
                 </button>
-                <button class="btn btn-ghost" id="btnDownloadZip">Descargar ZIP (respaldo)</button>
-                <button class="btn btn-ghost" id="btnReset">Procesar otro archivo</button>
-            </div>
-            <p class="dz-secondary" style="margin-top:10px;">Sube el archivo .json a la raíz de tu carpeta <strong>CotAuto</strong> en OneDrive — el flujo hace el resto.</p>
-        </section>
-    </main>
+            </section>
 
-    <footer class="footer">ScaleAQ — Los datos se procesan en tu navegador, sin servidores.</footer>
-</div>
+            <!-- Step 3: Progress -->
+            <section class="progress hidden" id="progressSection">
+                <div class="pbar-track">
+                    <div class="pbar-fill" id="progressBar"></div>
+                </div>
+                <p class="pbar-text" id="progressText">Inicializando...</p>
+            </section>
 
-<!-- CDN libs (only 3, no Node/server needed) -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.12/pdfmake.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.12/vfs_fonts.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
-<script>
-(function() {
-    'use strict';
+            <!-- Step 4: Results -->
+            <section class="results hidden" id="resultsSection">
+                <div class="results-msg">
+                    <div class="check-circle">✓</div>
+                    <h2>¡Cotizaciones Generadas!</h2>
+                    <p>Todas las cotizaciones fueron creadas con el formato corporativo ScaleAQ.</p>
+                    <p class="security-note">🔒 Todo se procesó en tu navegador. Tus datos nunca salieron de tu equipo.
+                    </p>
+                </div>
+                <div class="results-btns">
+                    <button class="btn btn-success" id="btnDownload">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                            <polyline points="7 10 12 15 17 10" />
+                            <line x1="12" y1="15" x2="12" y2="3" />
+                        </svg>
+                        Descargar Lote OneDrive (.json)
+                    </button>
+                    <button class="btn btn-ghost" id="btnDownloadZip">Descargar ZIP (respaldo)</button>
+                    <button class="btn btn-ghost" id="btnReset">Procesar otro archivo</button>
+                </div>
+                <p class="dz-secondary" style="margin-top:10px;">Sube el archivo .json a la raíz de tu carpeta
+                    <strong>CotAuto</strong> en OneDrive — el flujo hace el resto.
+                </p>
+            </section>
+        </main>
 
-    // DOM refs
-    const $ = id => document.getElementById(id);
-    const dropZone = $('dropZone'), fileInput = $('fileInput'), fileBar = $('fileBar'),
-          fileName = $('fileName'), btnClear = $('btnClear'),
-          previewSection = $('previewSection'), previewBody = $('previewBody'),
-          clientCount = $('clientCount'), btnGenerate = $('btnGenerate'),
-          progressSection = $('progressSection'), progressBar = $('progressBar'),
-          progressText = $('progressText'),
-          resultsSection = $('resultsSection'), btnDownload = $('btnDownload'),
-          btnReset = $('btnReset');
+        <footer class="footer">ScaleAQ — Los datos se procesan en tu navegador, sin servidores.</footer>
+    </div>
 
-    let currentFile = null, parsedQuotes = [], zipBlob = null, zipName = 'cotizaciones.zip';
-    let loteBlob = null, loteName = 'lote.json';
-    let fileYM = null, fileWarnings = [];
+    <!-- CDN libs (only 3, no Node/server needed) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.12/pdfmake.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.12/vfs_fonts.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <script>
+        (function () {
+            'use strict';
 
-    // Uint8Array/ArrayBuffer → base64 (por bloques, para no reventar la pila)
-    function bufToB64(buf) {
-        const bytes = new Uint8Array(buf);
-        let binary = '';
-        for (let i = 0; i < bytes.length; i += 0x8000)
-            binary += String.fromCharCode.apply(null, bytes.subarray(i, i + 0x8000));
-        return btoa(binary);
-    }
+            // DOM refs
+            const $ = id => document.getElementById(id);
+            const dropZone = $('dropZone'), fileInput = $('fileInput'), fileBar = $('fileBar'),
+                fileName = $('fileName'), btnClear = $('btnClear'),
+                previewSection = $('previewSection'), previewBody = $('previewBody'),
+                clientCount = $('clientCount'), btnGenerate = $('btnGenerate'),
+                progressSection = $('progressSection'), progressBar = $('progressBar'),
+                progressText = $('progressText'),
+                resultsSection = $('resultsSection'), btnDownload = $('btnDownload'),
+                btnReset = $('btnReset');
 
-    // --- Drag & Drop ---
-    ['dragenter','dragover'].forEach(ev => dropZone.addEventListener(ev, e => { e.preventDefault(); dropZone.classList.add('dragover'); }));
-    ['dragleave','drop'].forEach(ev => dropZone.addEventListener(ev, e => { e.preventDefault(); dropZone.classList.remove('dragover'); }));
-    dropZone.addEventListener('drop', e => { if (e.dataTransfer.files.length) handleFile(e.dataTransfer.files[0]); });
-    fileInput.addEventListener('change', () => { if (fileInput.files.length) handleFile(fileInput.files[0]); });
-    btnClear.addEventListener('click', e => { e.stopPropagation(); reset(); });
-    btnReset.addEventListener('click', reset);
+            let currentFile = null, parsedQuotes = [], zipBlob = null, zipName = 'cotizaciones.zip';
+            let loteBlob = null, loteName = 'lote.json';
+            let fileYM = null, fileWarnings = [];
 
-    function handleFile(file) {
-        if (!/\.xlsx?$/i.test(file.name)) return alert('Selecciona un archivo Excel (.xlsx o .xls)');
-        currentFile = file;
-        fileName.textContent = file.name;
-        dropZone.classList.add('hidden');
-        fileBar.classList.remove('hidden');
-        parseExcel(file);
-    }
+            // Uint8Array/ArrayBuffer → base64 (por bloques, para no reventar la pila)
+            function bufToB64(buf) {
+                const bytes = new Uint8Array(buf);
+                let binary = '';
+                for (let i = 0; i < bytes.length; i += 0x8000)
+                    binary += String.fromCharCode.apply(null, bytes.subarray(i, i + 0x8000));
+                return btoa(binary);
+            }
 
-    // --- Excel Parser ---
-    function parseExcel(file) {
-        previewBody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:var(--text-dim)">Analizando archivo…</td></tr>';
-        previewSection.classList.remove('hidden');
+            // --- Drag & Drop ---
+            ['dragenter', 'dragover'].forEach(ev => dropZone.addEventListener(ev, e => { e.preventDefault(); dropZone.classList.add('dragover'); }));
+            ['dragleave', 'drop'].forEach(ev => dropZone.addEventListener(ev, e => { e.preventDefault(); dropZone.classList.remove('dragover'); }));
+            dropZone.addEventListener('drop', e => { if (e.dataTransfer.files.length) handleFile(e.dataTransfer.files[0]); });
+            fileInput.addEventListener('change', () => { if (fileInput.files.length) handleFile(fileInput.files[0]); });
+            btnClear.addEventListener('click', e => { e.stopPropagation(); reset(); });
+            btnReset.addEventListener('click', reset);
 
-        const reader = new FileReader();
-        reader.onload = function(e) {
-            try {
-                const wb = XLSX.read(new Uint8Array(e.target.result), { type: 'array' });
+            function handleFile(file) {
+                if (!/\.xlsx?$/i.test(file.name)) return alert('Selecciona un archivo Excel (.xlsx o .xls)');
+                currentFile = file;
+                fileName.textContent = file.name;
+                dropZone.classList.add('hidden');
+                fileBar.classList.remove('hidden');
+                parseExcel(file);
+            }
 
-                // Maestro
-                const maestro = {};
-                if (wb.SheetNames.includes('Maestro')) {
-                    XLSX.utils.sheet_to_json(wb.Sheets['Maestro']).forEach(r => {
-                        const c = (r['Cliente']||'').toString().trim();
-                        if (c) maestro[c.toLowerCase()] = { solicitadoPor: r['Solicitado por']||'', correo: r['Correo']||'' };
-                    });
+            // --- Excel Parser ---
+            function parseExcel(file) {
+                previewBody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:var(--text-dim)">Analizando archivo…</td></tr>';
+                previewSection.classList.remove('hidden');
+
+                const reader = new FileReader();
+                reader.onload = function (e) {
+                    try {
+                        const wb = XLSX.read(new Uint8Array(e.target.result), { type: 'array' });
+
+                        // Maestro
+                        const maestro = {};
+                        if (wb.SheetNames.includes('Maestro')) {
+                            XLSX.utils.sheet_to_json(wb.Sheets['Maestro']).forEach(r => {
+                                const c = (r['Cliente'] || '').toString().trim();
+                                if (c) maestro[c.toLowerCase()] = { solicitadoPor: r['Solicitado por'] || '', correo: r['Correo'] || '' };
+                            });
+                        }
+
+                        // Mes
+                        if (!wb.SheetNames.includes('Mes')) throw new Error('Falta la hoja "Mes" en el Excel');
+                        const rows = XLSX.utils.sheet_to_json(wb.Sheets['Mes'], { header: 1 });
+                        if (rows.length < 5) throw new Error('La hoja "Mes" no tiene datos suficientes');
+
+                        const h = rows[3];
+                        if (!h || !h.includes('CLIENTE') || !h.includes('Cotización ID'))
+                            throw new Error('Faltan columnas CLIENTE o Cotización ID en la fila 4');
+
+                        const idx = {
+                            fec: h.indexOf('FECHA FACTURACION'),
+                            cli: h.indexOf('CLIENTE'), cot: h.indexOf('Cotización ID'),
+                            tar: h.indexOf('TARIFA MENSUAL'), mon: h.indexOf('MONEDA'),
+                            det: h.indexOf('Detalle'), cob: h.indexOf('COBRO ASOCIADO'),
+                            itm: h.indexOf('ITEM COBRADO'), ema: h.indexOf('Correo'),
+                            obs: h.indexOf('OBS'), tip: h.indexOf('TIPO DE COBRO')
+                        };
+
+                        // Mes del archivo = mes MÁS RECIENTE en FECHA FACTURACION (columna A).
+                        // El archivo vivo acumula filas de meses anteriores (ocultas con filtros de Excel):
+                        // el ciclo vigente es siempre el último mes presente.
+                        fileWarnings = [];
+                        let maxYM = 0;
+                        for (let i = 4; i < rows.length; i++) {
+                            const r = rows[i];
+                            if (!r || !r[idx.cli]) continue;
+                            const d = idx.fec !== -1 ? excelDate(r[idx.fec]) : null;
+                            if (d) { const k = d.getUTCFullYear() * 100 + d.getUTCMonth() + 1; if (k > maxYM) maxYM = k; }
+                        }
+                        if (maxYM) {
+                            fileYM = { y: Math.floor(maxYM / 100), m: maxYM % 100 };
+                        } else {
+                            const d = new Date();
+                            fileYM = { y: d.getFullYear(), m: d.getMonth() + 1 };
+                            fileWarnings.push('No se pudo leer FECHA FACTURACION (columna A); se asume el mes actual.');
+                        }
+
+                        const groups = {};
+                        let historicas = 0;
+                        for (let i = 4; i < rows.length; i++) {
+                            const r = rows[i];
+                            if (!r || !r[idx.cli]) continue;
+                            const cli = r[idx.cli].toString().trim();
+
+                            // Filas de meses anteriores (histórico del archivo, normalmente ocultas por filtros) → se omiten
+                            const fRow = idx.fec !== -1 ? excelDate(r[idx.fec]) : null;
+                            if (fRow && (fRow.getUTCFullYear() !== fileYM.y || fRow.getUTCMonth() + 1 !== fileYM.m)) {
+                                historicas++;
+                                continue;
+                            }
+
+                            const cotRaw = (r[idx.cot] || '').toString();
+                            const cot = cotRaw.replace(/\s+/g, '').toUpperCase();
+                            if (!cot || /^(NOAPLICA|N\/A)$/.test(cot)) continue;
+                            if (cot !== cotRaw) fileWarnings.push(`Cotización ID normalizado en ${cli}: "${cotRaw.trim()}" → "${cot}"`);
+
+                            const key = cli + '::' + cot;
+                            if (!groups[key]) {
+                                const m = maestro[cli.toLowerCase()] || {};
+                                groups[key] = {
+                                    cliente: cli, cotizacionId: cot, items: [], obsVals: [], tipos: [],
+                                    solicitadoPor: m.solicitadoPor || '',
+                                    correo: m.correo || (idx.ema !== -1 && r[idx.ema] ? r[idx.ema].toString().trim() : '')
+                                };
+                            }
+                            const obsV = idx.obs !== -1 && r[idx.obs] ? r[idx.obs].toString().trim() : '';
+                            if (obsV && !groups[key].obsVals.includes(obsV)) groups[key].obsVals.push(obsV);
+                            groups[key].tipos.push(idx.tip !== -1 && r[idx.tip] ? r[idx.tip].toString().trim() : '');
+                            const raw = r[idx.tar];
+                            const tarifa = typeof raw === 'number' ? raw : parseFloat(raw) || 0;
+                            const moneda = (r[idx.mon] || 'UF').toString().trim().toUpperCase();
+                            let detalle = '';
+                            if (idx.det !== -1 && r[idx.det]) { detalle = r[idx.det].toString().trim(); }
+                            else {
+                                const a = r[idx.cob] ? r[idx.cob].toString().trim() : '';
+                                const b = r[idx.itm] ? r[idx.itm].toString().trim() : '';
+                                detalle = a && b ? a + ' - ' + b : a || b || 'Servicio';
+                            }
+                            groups[key].items.push({ detalle, tarifa, moneda });
+                        }
+
+                        if (historicas) fileWarnings.push(`${historicas} fila(s) de meses anteriores omitidas (histórico del archivo).`);
+
+                        parsedQuotes = Object.values(groups).map(g => {
+                            let tUF = 0, tUSD = 0;
+                            g.items.forEach(it => { if (it.moneda === 'UF') tUF += it.tarifa; if (it.moneda === 'USD') tUSD += it.tarifa; });
+                            return {
+                                name: g.cliente, cotizacionId: g.cotizacionId,
+                                solicitadoPor: g.solicitadoPor || 'No especificado',
+                                correo: g.correo || 'No especificado',
+                                itemCount: g.items.length, totalUF: tUF, totalUSD: tUSD, items: g.items,
+                                periodicidad: clasificar(g.cotizacionId),
+                                mesesObs: mesesDesdeObs(g.obsVals),
+                                tipoSpot: g.tipos.length > 0 && g.tipos.every(t => /^spot$/i.test(t))
+                            };
+                        }).sort((a, b) => a.name.localeCompare(b.name));
+
+                        renderPreview();
+                    } catch (err) {
+                        alert('Error al leer el Excel: ' + err.message);
+                        reset();
+                    }
+                };
+                reader.onerror = () => { alert('Error leyendo el archivo'); reset(); };
+                reader.readAsArrayBuffer(file);
+            }
+
+            function renderPreview() {
+                previewBody.innerHTML = '';
+                const quotes = applyFilter(parsedQuotes);
+
+                const ml = $('monthLabel');
+                if (ml && fileYM) ml.textContent = '— ' + MESES_ES[fileYM.m - 1] + ' ' + fileYM.y;
+
+                const excluidas = parsedQuotes.map(q => ({ q, c: correspondeAlMes(q) })).filter(e => !e.c.ok);
+                const nota = $('periodicityNote');
+                if (nota) {
+                    const partes = [];
+                    excluidas.forEach(e => partes.push(`⛔ ${e.q.name} (${e.q.cotizacionId}): ${e.c.motivo}`));
+                    [...new Set(fileWarnings)].forEach(w => partes.push('⚠️ ' + w));
+                    nota.innerHTML = partes.join('<br>');
                 }
 
-                // Mes
-                if (!wb.SheetNames.includes('Mes')) throw new Error('Falta la hoja "Mes" en el Excel');
-                const rows = XLSX.utils.sheet_to_json(wb.Sheets['Mes'], { header: 1 });
-                if (rows.length < 5) throw new Error('La hoja "Mes" no tiene datos suficientes');
+                if (!quotes.length) {
+                    previewBody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:var(--error)">No hay cotizaciones con el filtro seleccionado.</td></tr>';
+                    btnGenerate.disabled = true;
+                    return;
+                }
+                clientCount.textContent = quotes.length + ' cotizaciones';
+                btnGenerate.disabled = false;
+                const fmt = n => n.toLocaleString('es-CL', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                quotes.forEach(q => {
+                    const tr = document.createElement('tr');
+                    tr.innerHTML =
+                        `<td class="client-name">${q.name}</td>` +
+                        `<td><code>${q.cotizacionId}</code></td>` +
+                        `<td class="mono">${q.itemCount}</td>` +
+                        `<td class="mono">${fmt(q.totalUF)}</td>` +
+                        `<td class="mono">${fmt(q.totalUSD)}</td>`;
+                    previewBody.appendChild(tr);
+                });
+            }
 
-                const h = rows[3];
-                if (!h || !h.includes('CLIENTE') || !h.includes('Cotización ID'))
-                    throw new Error('Faltan columnas CLIENTE o Cotización ID en la fila 4');
+            // --- PDF Generation ---
+            function docDef(q) {
+                // Fecha en español: "02 de Mayo de 2026"
+                const today = (() => {
+                    const d = new Date();
+                    const meses = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
+                        'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
+                    return `${d.getDate()} de ${meses[d.getMonth()]} de ${d.getFullYear()}`;
+                })();
+                const uf = q.items.filter(it => it.moneda === 'UF' && it.detalle.trim());
+                const usd = q.items.filter(it => it.moneda === 'USD' && it.detalle.trim());
+                const fmt = n => n.toLocaleString('es-CL', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
-                const idx = {
-                    fec: h.indexOf('FECHA FACTURACION'),
-                    cli: h.indexOf('CLIENTE'), cot: h.indexOf('Cotización ID'),
-                    tar: h.indexOf('TARIFA MENSUAL'), mon: h.indexOf('MONEDA'),
-                    det: h.indexOf('Detalle'), cob: h.indexOf('COBRO ASOCIADO'),
-                    itm: h.indexOf('ITEM COBRADO'), ema: h.indexOf('Correo'),
-                    obs: h.indexOf('OBS'), tip: h.indexOf('TIPO DE COBRO')
+                // Embedded PDF Logo (logo pdf.png)
+                const scaleAQLogoBase64 = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAI4AAAAeCAYAAAD6myZLAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAA2SSURBVHhe7VpnWFTHGiZobBhjTIxpFxdEEXNjj8YSvUovoigozV5i7BhLYm5uLFiCV02MsaHxJiCIihVFEBuiIqAIKlEQUJpUAUWq8t7nm9lld8+eZXdR8yPhfZ73ObBn5pvvzLznm/lmjh4a0YgGQE/4QyMaoQ0ahdOIBkEr4Tx/Xouammd49uy51qTyNc+esbrq8Py5aj11lLWvDtr6SGWoXU3QpowuUHwGbSgrW1urvv8IutrVlpr6u17hlFdUIvp6EnwDQ7DJ9wB+2h2sNTftOoD1O/YhKvam0Cwqq6px/WYy9hwIxY+7DjIK6yuS7m/YeQCh566iqrpaydbT8kpEXk3AzgDNPpKdTb4HWbvXEpOZH2Ioe1qBE2eicfBkJHILioS3dcLD/CIcO30Zm389pNE/RW70PYAd/iFIfZAtNFmHgqIS7D0cgfXbg1Tqvyip/d+Dw1H6pEzYLINa4RQ+KsVXq7ahQ68xMOhqh5ZdbHWgDVqa2qNFFwes3uynZPdBdi68Vm7Fe73Jrr1IXTHaobmpA+Z8t5kNqgx5hcWYuWwj3u4+Eq1MhXXUk9ql9ucv34L0zIdK/hFyCx7BdbY3WndzgqX7IlyKu6XxzRdDxMU4DHXxwhtmDio+aGILU3uYDJ2IyOgEodk6XL+VjH6Os9Gyq6NK/RemqQNMh01EWkaOsFkGUeFQpPHe7I9mnWyhL7GAfsfhOnIY9I1t8FF/V4ScuVxnl8Q4YcFaNDOx09GuJfQl5th7JKJuACsqq7Bg+RY070y2zEXqaKDEgvnhOnsVe3MVkVdQDOcvlrNn0De2hrXnUiQlpyuV0YQ79zLQ23YG9I2soN9RR//oeYytMchpNoqKHwtN1yH+VjJ62VEb1qo2XpQSS5gM8UBahnjEExVOcnomJAPdoG9kI31oHSmxREtTOyzz8UVlpXw62OZ3BG26jeBCMPwX9A2HqdYVUmKBFl3sMGnhOjwqkXdi4h9peOtjB4WB0YHULrXf0QKtu9pjy/+C6+wS8gtLMG7WSvYcVL6JxBzb/Y4qldGElT/+htc72TTIvybG1jAe7IHgk+eFZpVw/dZd9LCZ3vBxqo8SKxgPdtdNOLGJd2A2bAIM+4+F0UBXrSkZMI5dhzjPx1a/oygulQ80RQi3Oav4YEhF09LECoafuaDTYDcVWzIOGDUXqzf7s2iliIioa+gydDw++tRZpY46mnzuztpr1dlaLlyJBVy+/J75J4OScKicxBKLvLexxb62WOy9DUaD3HXqQ+o/06GecJ3jjbALMfUuTglJKffhOPU7fNiP9/vLpOFn42DuthAZ2XnCZhlEhUMLznv3s5GSloV76dlak8rfz8xlkUH40Nm5hbD2WKI0GFMW+eDmnTSkZ+bgbmqGClPSs1BUXIrq6holW4THZU+Rkp6N5NRMFT+EPiWnZTJ797MesvZmLN3Ap0qpH8PHLWT+ySAmnPnf/4wqET/UISevkPmnbR9yP7OQkZPH+l8b0OI+I6eA1RPaq7OZyp9djHRPnX9kk8ZSrO8JosJ5FXiQlcsWmnww+Ju+fnugsNifAsoauHDID0sMG+vF/JNBTDheK37RSTh/dYgKh96WvYdPw/9wOLtqQ/9D4fALDsORsCgkp2aopM0U8qw8FisJZ80Wf6UyuqCktAzHTl+C3yFxH8mfgCMRLLPJK3hUV4/W1uu372PrG5lwKOIohuSXIRyaRvYdOwu/YHH/FPn7wTDsDzmH7NwCoZn6UVkO3I0GLvhJ6S/n+d+BiwFASixQIxLBnlUDqdeAqEBeVrEu2Yo5ChRk8A4TgahwouNvo+0/7WFg5sBScV1Iqadh/3H4eu1OFnZlEBPO6p/9GpTmEkLPx6BDH2cYmNmr+CBjazN7tDFzwHDXhQg9F83aoo09n22Br1w4X36zEa27jajXvzqaOaDjQHdcvnZLaEY9njwCAr4FJrUFPFoA7i0ANwXS/54tgSntgb3fAKUKoiwvBfYuAya352UU60nr1nq0Qu2S3kDsMdoNVWyZQVQ4WQ/z0d9xlnS1LpKqaaQFmnW2xfj5a/Awj2+gvWzh7A85jxadbbRIxc1ZZtPDejrib6Wwun+GcNxnr4K+kYXW/vW1+wL5hcVCM+oRGQi4NgU89IBxUo4V0EV6dXsdOLZJLoDDPsCE1splFEm2nKXXOV2AB6qbuKLCocHcd+wM2nUfyTuPpWjCB1ZDQyJ1tgWaGlni5z081c3MyX+pwgkOjUTrrnZ8z4hlSEQRf4jUprE1vFZuYXU3+u5/5cKZ5LVOKhoF/4R+EY0s0aH3GDZl6YSLgcC3gwBvG2CVDeBty6+yv9c4AAu6A2OaAu56gM9IoCgbqK4AVlgCrnrA6NeAr3oBa+zl9VfbASutgcnvAWOkwgrfDjxXzihFhUOoqqpB0PFzsHRbhI/6ueCd7o54t9cotezQexTe/mQEWnSyku+TGFlh7JcrUFz6hO3GvkrhNJUMR7tPRjA/hL617zkKbbrZs70gwk+/Bv/pwmnZ2Qrte8r78J0ejvjwU2fWJ0HHzqpkoRrxrIaLoKoCqK5ErfTKWFUOVJYBlw8CMw0BTz3gP0OAnGQ+ZX0zEHDTAya0A+LDedmKJ8rcPhMYq8+jTtBy3o4C1ApHBlqE3k6+j9iEO4hLvItrN5NFeSPpHrvOWraJRyjW4VYY4rIAyelZKCgqVhHO2l8avjiWC4e/ue17OCLgaATbhic/yV9F0pkbpfd0GPrfHUE6C4eOX3TZx5ELh+9SO0xehosxiUhISmX9RD5Svz5+8lRYVTvQgpciSEEmu9bStTCbD7oMCRHAHBNgPAlnKJCTApTkA8sGceFM6QDci1W0KseeRcDYJnLhkCAVoFE4umJPUKh0MPmgDHSayzqIhCOWjr94xKG2zPFh3zG4k5ohLKYCEo6mNQ4dOVCkVBTO0jU7dfJ14oK1CsKxxJTF61FWXi4s1mDUnt4FTP0AmNERmGEETOsITDcEvvsciNrHp5Yb4cCcTuqFM/ld4O4VoWmO3V6AizTi7F+hvXDKK6qQlPIAp87HIOTMFZw8d5XxxNloUYZFxrLr+PnevLOkEYcO+WgDrvTxU9iOX6owGOYYOe1bdgIddiGWtVEfM7LzlfwTCuf93k5IvJOmVEYM2ginuLQMHnO9lXw1d/XCvuPnEB4Zp+IbZzROXYhBcQl/46ct8kETI/nasJfNNAQcPcPqUz8p9qXQFp2mR8XdRGWVfDdbCc+fo3bfcj74tIiVLXBpkEkks/4BJJzlopirJuLQuociTkqM0DpHQyIOfQow7/st6DjAFW3M7PGGGaXZ9ZPWEG+Y2aOZsbSzpWscz3mrWWfS2zp1sQ8fDOm836yTJRv8+tugeyOwZ/8ppW9kxIRD06UmkHB+2BpQr3DI16/X7FTy9XVjOteqz1cHvNvTCVGxiczGul8CYGBqX/cSNTUarqG+AruNwODRc9m6UBQU+YJWcbE4kWAo7e7AI8jEdoCnARCxC0iOAeaZKgtHYY1T6/kmaq8cAsofA6X5QEkev/+4ENg8GXB5TfuIQ8cFUxev5yfYumRTMrKFMR8Q2qPYFXiiznbQ8bP4oN9Y+XRFFNZXIT803bE35KUIh7D1tyPSZxMXDoGioMmQ8fyQUhtfJRbs7O38lXhWP/GPVJgOncCirry+BhsyGlmil8109gKLgoSz35sLx1kPtZs8UZuewDf0KIJQpCkrVp2qsu/yKWyVLc+qSHQzjYAl/YDFfTmXfAos6gN4tuVZFUW0M7tV9nJUhEOhk3cEvW0iD6UNqRNN7dn3M5RRyVBdU4Nv1vnCoKuDDvbFhUM7rc1NrPnRgcSSZXS0MNYGkVdv4P0+zmyAaGDFhENZjs/WQLz5sSMvp+KXyDObWOP8lRusPkUt34DjeL+vCxefRKSOOhpZoqfVNA0RZyWfbkgAvy0WluBIPAvM7QxMkAon4zb/PXQrMO0dXlc2zdGVREIkwRAp2pCYKBsTQEk4NLCUqtJuJw+btjqzbTcH9LabgQ2+B1ROtAll5RXYsfc4Boycg7c+HqFSX5UUuh1Upqoj4ZfQoc8Y6VTmAONBrkj4Q7uIU/a0HP9e/ysTt76xLYY4L8CDLNUPuujYxP9wBIaNW4i3Pxkp4psi6eOw0SxzkoE+vzx44gJsPJegfU9N9RXYzQGDneayD9VEQcI59AMw0QAYbwD4fS0swUHTzwYXYBIJZyBwX7qRV1MFhGwC5nUB3A0At1aolYmFopCTdBqjPZ07l0SPHZSEQwNz70E2wiLj2CJOF1JoJ16Ou8XOXKjT1IHe5tz8RyxFltUT2lOyGxmHrIfK5ziU+UREXWf3aQFPb3rpY/HPHMVQVFKKH3cHo+vwyRg94z/IVDgeUQT1CX3oRSl9fb6GXYjDmajreFSskA5LIw8lBvG3U3D64jW19RVJzxMdn6Ry3qeE3FTgeigQf4pPQeqQGgestQHW2QOZSfLfaR/o4T3g9gU2pdVudAfcmtUttmuXDZRHKBGoTFV/J5C4c/KLkJqRjYpKkYPAvwpowZubxjf61IEWxL6zgYltgAnN+cYhiUoN/tbCaYQAlU+BayHAyZ+Am2f5/2rQKJxGqEJwLiWGRuE0okFoFE4jGoRG4TSiQfg/Q+03/kZ53z8AAAAASUVORK5CYII=';
+
+                const tbl = (items, cur) => {
+                    const body = [[
+                        { text: 'Cantidad', style: 'th', alignment: 'center' },
+                        { text: 'Detalle', style: 'th', alignment: 'center' },
+                        { text: 'Valor ' + cur, style: 'th', alignment: 'right' }
+                    ]];
+
+                    items.forEach(it => body.push([
+                        { text: '1', style: 'td', alignment: 'center' },
+                        { text: it.detalle, style: 'td' },
+                        { text: fmt(it.tarifa), style: 'td', alignment: 'right' }
+                    ]));
+
+                    // Spacer rows: siempre al menos 10 filas de contenido como la plantilla
+                    const minRows = 10;
+                    for (let i = 0; i < Math.max(0, minRows - items.length); i++) {
+                        body.push([{ text: '', style: 'td' }, { text: '', style: 'td' }, { text: '', style: 'td' }]);
+                    }
+
+                    const sum = items.reduce((a, c) => a + c.tarifa, 0);
+                    body.push([
+                        { text: '', border: [false, false, false, false] },
+                        { text: 'Total', alignment: 'right', bold: true, style: 'td_total' },
+                        { text: fmt(sum), alignment: 'right', bold: true, style: 'td_total' }
+                    ]);
+                    return body;
                 };
 
-                // Mes del archivo = mes MÁS RECIENTE en FECHA FACTURACION (columna A).
-                // El archivo vivo acumula filas de meses anteriores (ocultas con filtros de Excel):
-                // el ciclo vigente es siempre el último mes presente.
-                fileWarnings = [];
-                let maxYM = 0;
-                for (let i = 4; i < rows.length; i++) {
-                    const r = rows[i];
-                    if (!r || !r[idx.cli]) continue;
-                    const d = idx.fec !== -1 ? excelDate(r[idx.fec]) : null;
-                    if (d) { const k = d.getUTCFullYear() * 100 + d.getUTCMonth() + 1; if (k > maxYM) maxYM = k; }
+                const contentBlocks = [
+                    // Header: cotización + logo
+                    {
+                        columns: [
+                            {
+                                width: 230, table: {
+                                    widths: [95, 130], body: [
+                                        [{ text: 'Cotización N°', bold: true, fontSize: 10, style: 'metaLabel' }, { text: q.cotizacionId, fontSize: 10, alignment: 'center', style: 'metaVal' }],
+                                        [{ text: 'Fecha', bold: true, fontSize: 10, style: 'metaLabel' }, { text: today, fontSize: 10, alignment: 'center', style: 'metaVal' }]
+                                    ]
+                                }
+                            },
+                            { width: '*', text: '' },
+                            { width: 115, image: scaleAQLogoBase64, alignment: 'right', margin: [0, 2, 0, 0] }
+                        ]
+                    },
+                    { text: '', margin: [0, 18] },
+                    // Datos del cliente
+                    {
+                        table: {
+                            widths: ['auto', '*'], body: [
+                                [{ text: 'Señor(es)', bold: true, fontSize: 10, style: 'metaLabel' }, { text: q.name, fontSize: 10, style: 'metaVal' }],
+                                [{ text: 'Solicitado por', bold: true, fontSize: 10, style: 'metaLabel' }, { text: q.solicitadoPor, fontSize: 10, style: 'metaVal' }],
+                                [{ text: 'Correo', bold: true, fontSize: 10, style: 'metaLabel' }, { text: q.correo, fontSize: 10, style: 'metaVal' }]
+                            ]
+                        }, margin: [0, 0, 0, 22]
+                    },
+                ];
+
+                // Solo se muestran las tablas de las monedas con ítems: UF arriba, USD abajo
+                if (uf.length > 0) {
+                    contentBlocks.push({ table: { widths: [55, '*', 100], body: tbl(uf, 'UF') }, margin: [0, 0, 0, usd.length > 0 ? 22 : 28] });
                 }
-                if (maxYM) {
-                    fileYM = { y: Math.floor(maxYM / 100), m: maxYM % 100 };
-                } else {
-                    const d = new Date();
-                    fileYM = { y: d.getFullYear(), m: d.getMonth() + 1 };
-                    fileWarnings.push('No se pudo leer FECHA FACTURACION (columna A); se asume el mes actual.');
-                }
-
-                const groups = {};
-                let historicas = 0;
-                for (let i = 4; i < rows.length; i++) {
-                    const r = rows[i];
-                    if (!r || !r[idx.cli]) continue;
-                    const cli = r[idx.cli].toString().trim();
-
-                    // Filas de meses anteriores (histórico del archivo, normalmente ocultas por filtros) → se omiten
-                    const fRow = idx.fec !== -1 ? excelDate(r[idx.fec]) : null;
-                    if (fRow && (fRow.getUTCFullYear() !== fileYM.y || fRow.getUTCMonth() + 1 !== fileYM.m)) {
-                        historicas++;
-                        continue;
-                    }
-
-                    const cotRaw = (r[idx.cot]||'').toString();
-                    const cot = cotRaw.replace(/\s+/g, '').toUpperCase();
-                    if (!cot || /^(NOAPLICA|N\/A)$/.test(cot)) continue;
-                    if (cot !== cotRaw) fileWarnings.push(`Cotización ID normalizado en ${cli}: "${cotRaw.trim()}" → "${cot}"`);
-
-                    const key = cli + '::' + cot;
-                    if (!groups[key]) {
-                        const m = maestro[cli.toLowerCase()] || {};
-                        groups[key] = {
-                            cliente: cli, cotizacionId: cot, items: [], obsVals: [], tipos: [],
-                            solicitadoPor: m.solicitadoPor || '',
-                            correo: m.correo || (idx.ema !== -1 && r[idx.ema] ? r[idx.ema].toString().trim() : '')
-                        };
-                    }
-                    const obsV = idx.obs !== -1 && r[idx.obs] ? r[idx.obs].toString().trim() : '';
-                    if (obsV && !groups[key].obsVals.includes(obsV)) groups[key].obsVals.push(obsV);
-                    groups[key].tipos.push(idx.tip !== -1 && r[idx.tip] ? r[idx.tip].toString().trim() : '');
-                    const raw = r[idx.tar];
-                    const tarifa = typeof raw === 'number' ? raw : parseFloat(raw) || 0;
-                    const moneda = (r[idx.mon]||'UF').toString().trim().toUpperCase();
-                    let detalle = '';
-                    if (idx.det !== -1 && r[idx.det]) { detalle = r[idx.det].toString().trim(); }
-                    else {
-                        const a = r[idx.cob] ? r[idx.cob].toString().trim() : '';
-                        const b = r[idx.itm] ? r[idx.itm].toString().trim() : '';
-                        detalle = a && b ? a+' - '+b : a||b||'Servicio';
-                    }
-                    groups[key].items.push({ detalle, tarifa, moneda });
+                if (usd.length > 0) {
+                    contentBlocks.push({ table: { widths: [55, '*', 100], body: tbl(usd, 'USD') }, margin: [0, 0, 0, 28] });
                 }
 
-                if (historicas) fileWarnings.push(`${historicas} fila(s) de meses anteriores omitidas (histórico del archivo).`);
+                contentBlocks.push(
+                    { text: 'Comentarios:', bold: true, fontSize: 10, margin: [0, 0, 0, 4] },
+                    { text: '• Valores más IVA\n• Esta cotización tiene una validez de 15 días a contar fecha de recepción', fontSize: 9, lineHeight: 1.4 }
+                );
 
-                parsedQuotes = Object.values(groups).map(g => {
-                    let tUF = 0, tUSD = 0;
-                    g.items.forEach(it => { if (it.moneda==='UF') tUF+=it.tarifa; if (it.moneda==='USD') tUSD+=it.tarifa; });
-                    return {
-                        name: g.cliente, cotizacionId: g.cotizacionId,
-                        solicitadoPor: g.solicitadoPor || 'No especificado',
-                        correo: g.correo || 'No especificado',
-                        itemCount: g.items.length, totalUF: tUF, totalUSD: tUSD, items: g.items,
-                        periodicidad: clasificar(g.cotizacionId),
-                        mesesObs: mesesDesdeObs(g.obsVals),
-                        tipoSpot: g.tipos.length > 0 && g.tipos.every(t => /^spot$/i.test(t))
-                    };
-                }).sort((a,b) => a.name.localeCompare(b.name));
-
-                renderPreview();
-            } catch(err) {
-                alert('Error al leer el Excel: ' + err.message);
-                reset();
-            }
-        };
-        reader.onerror = () => { alert('Error leyendo el archivo'); reset(); };
-        reader.readAsArrayBuffer(file);
-    }
-
-    function renderPreview() {
-        previewBody.innerHTML = '';
-        const quotes = applyFilter(parsedQuotes);
-
-        const ml = $('monthLabel');
-        if (ml && fileYM) ml.textContent = '— ' + MESES_ES[fileYM.m - 1] + ' ' + fileYM.y;
-
-        const excluidas = parsedQuotes.map(q => ({ q, c: correspondeAlMes(q) })).filter(e => !e.c.ok);
-        const nota = $('periodicityNote');
-        if (nota) {
-            const partes = [];
-            excluidas.forEach(e => partes.push(`⛔ ${e.q.name} (${e.q.cotizacionId}): ${e.c.motivo}`));
-            [...new Set(fileWarnings)].forEach(w => partes.push('⚠️ ' + w));
-            nota.innerHTML = partes.join('<br>');
-        }
-
-        if (!quotes.length) {
-            previewBody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:var(--error)">No hay cotizaciones con el filtro seleccionado.</td></tr>';
-            btnGenerate.disabled = true;
-            return;
-        }
-        clientCount.textContent = quotes.length + ' cotizaciones';
-        btnGenerate.disabled = false;
-        const fmt = n => n.toLocaleString('es-CL', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-        quotes.forEach(q => {
-            const tr = document.createElement('tr');
-            tr.innerHTML =
-                `<td class="client-name">${q.name}</td>` +
-                `<td><code>${q.cotizacionId}</code></td>` +
-                `<td class="mono">${q.itemCount}</td>` +
-                `<td class="mono">${fmt(q.totalUF)}</td>` +
-                `<td class="mono">${fmt(q.totalUSD)}</td>`;
-            previewBody.appendChild(tr);
-        });
-    }
-
-    // --- PDF Generation ---
-    function docDef(q) {
-        // Fecha en español: "02 de Mayo de 2026"
-        const today = (() => {
-            const d = new Date();
-            const meses = ['Enero','Febrero','Marzo','Abril','Mayo','Junio',
-                           'Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
-            return `${d.getDate()} de ${meses[d.getMonth()]} de ${d.getFullYear()}`;
-        })();
-        const uf  = q.items.filter(i => i.moneda === 'UF');
-        const usd = q.items.filter(i => i.moneda === 'USD');
-        const fmt = n => n.toLocaleString('es-CL', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-
-        // Embedded PDF Logo (logo pdf.png)
-        const scaleAQLogoBase64 = 'data:image/png;base64,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';
-
-        const tbl = (items, cur) => {
-            const body = [[
-                { text: 'Cantidad', style: 'th', alignment: 'center' },
-                { text: 'Detalle', style: 'th', alignment: 'center' },
-                { text: 'Valor ' + cur, style: 'th', alignment: 'right' }
-            ]];
-
-            items.forEach(it => body.push([
-                { text: '1', style: 'td', alignment: 'center' },
-                { text: it.detalle, style: 'td' },
-                { text: fmt(it.tarifa), style: 'td', alignment: 'right' }
-            ]));
-
-            // Spacer rows: siempre al menos 10 filas de contenido como la plantilla
-            const minRows = 10;
-            for (let i = 0; i < Math.max(0, minRows - items.length); i++) {
-                body.push([{ text:'', style:'td' }, { text:'', style:'td' }, { text:'', style:'td' }]);
+                return {
+                    pageMargins: [40, 40, 40, 40],
+                    content: contentBlocks,
+                    defaultStyle: { font: 'Roboto', fontSize: 10 },
+                    styles: {
+                        th: { bold: true, fontSize: 10, color: '#ffffff', fillColor: '#031E40', margin: [5, 3, 5, 3] },
+                        td: { fontSize: 9, color: '#000000', margin: [5, 2, 5, 2] },
+                        td_total: { fontSize: 10, color: '#000000', margin: [5, 2, 5, 2] },
+                        metaLabel: { color: '#000000', margin: [5, 2, 5, 2] },
+                        metaVal: { color: '#000000', margin: [5, 2, 5, 2] }
+                    }
+                };
             }
 
-            const sum = items.reduce((a,c) => a + c.tarifa, 0);
-            body.push([
-                { text: '', border:[false,false,false,false] },
-                { text: 'Total', alignment:'right', bold:true, style:'td_total' },
-                { text: fmt(sum), alignment:'right', bold:true, style:'td_total' }
-            ]);
-            return body;
-        };
 
-        const contentBlocks = [
-            // Header: cotización + logo
-            { columns: [
-                { width: 230, table: { widths: [95, 130], body: [
-                    [{ text:'Cotización N°', bold:true, fontSize:10, style:'metaLabel' }, { text:q.cotizacionId, fontSize:10, alignment:'center', style:'metaVal' }],
-                    [{ text:'Fecha', bold:true, fontSize:10, style:'metaLabel' }, { text:today, fontSize:10, alignment:'center', style:'metaVal' }]
-                ]}},
-                { width: '*', text: '' },
-                { width: 115, image: scaleAQLogoBase64, alignment:'right', margin:[0,2,0,0] }
-            ]},
-            { text:'', margin:[0,18] },
-            // Datos del cliente
-            { table: { widths:['auto','*'], body: [
-                [{ text:'Señor(es)',     bold:true, fontSize:10, style:'metaLabel' }, { text:q.name,           fontSize:10, style:'metaVal' }],
-                [{ text:'Solicitado por', bold:true, fontSize:10, style:'metaLabel' }, { text:q.solicitadoPor, fontSize:10, style:'metaVal' }],
-                [{ text:'Correo',        bold:true, fontSize:10, style:'metaLabel' }, { text:q.correo,         fontSize:10, style:'metaVal' }]
-            ]}, margin:[0,0,0,22] },
-        ];
+            const filterMode = $('filterMode');
 
-        // Solo se muestran las tablas de las monedas con ítems: UF arriba, USD abajo
-        if (uf.length > 0) {
-            contentBlocks.push({ table: { widths:[55,'*',100], body: tbl(uf,'UF') }, margin:[0,0,0, usd.length > 0 ? 22 : 28] });
-        }
-        if (usd.length > 0) {
-            contentBlocks.push({ table: { widths:[55,'*',100], body: tbl(usd,'USD') }, margin:[0,0,0,28] });
-        }
+            // --- Utilidades de fecha y mes ---
+            const MESES_ES = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
+            const MES_ABREV = { ene: 1, feb: 2, mar: 3, abr: 4, may: 5, jun: 6, jul: 7, ago: 8, sep: 9, sept: 9, oct: 10, nov: 11, dic: 12, dec: 12 };
 
-        contentBlocks.push(
-            { text:'Comentarios:', bold:true, fontSize:10, margin:[0,0,0,4] },
-            { text:'• Valores más IVA\n• Esta cotización tiene una validez de 15 días a contar fecha de recepción', fontSize:9, lineHeight:1.4 }
-        );
-
-        return {
-            pageMargins: [40, 40, 40, 40],
-            content: contentBlocks,
-            defaultStyle: { font: 'Roboto', fontSize: 10 },
-            styles: {
-                th:       { bold:true, fontSize:10, color:'#ffffff', fillColor:'#031E40', margin:[5,3,5,3] },
-                td:       { fontSize:9,  color:'#000000', margin:[5,2,5,2] },
-                td_total: { fontSize:10, color:'#000000', margin:[5,2,5,2] },
-                metaLabel:{ color:'#000000', margin:[5,2,5,2] },
-                metaVal:  { color:'#000000', margin:[5,2,5,2] }
-            }
-        };
-    }
-
-
-    const filterMode = $('filterMode');
-
-    // --- Utilidades de fecha y mes ---
-    const MESES_ES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
-    const MES_ABREV = { ene:1, feb:2, mar:3, abr:4, may:5, jun:6, jul:7, ago:8, sep:9, sept:9, oct:10, nov:11, dic:12, dec:12 };
-
-    // Convierte fechas de Excel (Date, serial numérico o texto) a Date (en UTC)
-    function excelDate(v) {
-        if (v instanceof Date) return v;
-        if (typeof v === 'number' && v > 20000) return new Date(Math.round((v - 25569) * 86400000));
-        if (typeof v === 'string' && v.trim()) { const d = new Date(v); return isNaN(d) ? null : d; }
-        return null;
-    }
-
-    // --- Periodicidad (sufijo de "Cotización ID" + OBS por cliente) ---
-    //   01-12 → mensual (debe coincidir con el mes del archivo)
-    //   AN    → anual: factura en enero
-    //   S1/Sx → semestral: meses según OBS del cliente (ej. "ene-jul", "jun-dec"); si no hay, ene/jul
-    //   Q/Qx  → trimestral: meses según OBS; si no hay, ene/abr/jul/oct
-    function sufijoCot(cotId) {
-        const m = /^COT-(\d{4})-(.+)$/.exec(cotId || '');
-        return m ? { anio: +m[1], suf: m[2] } : null;
-    }
-    function clasificar(cotId) {
-        const p = sufijoCot(cotId);
-        if (!p) return 'otro';
-        if (/^\d{2}$/.test(p.suf)) return 'mensual';
-        if (p.suf === 'AN') return 'anual';
-        if (/^S\d*$/.test(p.suf)) return 'semestral';
-        if (/^Q\d*$/.test(p.suf)) return 'trimestral';
-        return 'otro';
-    }
-    // OBS tipo "ene-jul" / "jun-dec" → meses de facturación propios de ese cliente
-    function mesesDesdeObs(obsVals) {
-        for (const o of obsVals || []) {
-            const m = /^([a-zá-ú]{3,4})\s*-\s*([a-zá-ú]{3,4})$/i.exec(String(o).trim());
-            if (m) {
-                const a = MES_ABREV[m[1].toLowerCase()], b = MES_ABREV[m[2].toLowerCase()];
-                if (a && b) return [a, b];
-            }
-        }
-        return null;
-    }
-    // ¿Esta cotización corresponde al mes del archivo? (código desconocido → pasa, nunca se oculta en silencio)
-    function correspondeAlMes(q) {
-        if (!fileYM) return { ok: true };
-        const mm = fileYM.m, p = sufijoCot(q.cotizacionId);
-        switch (q.periodicidad) {
-            case 'mensual': {
-                if (p.anio !== fileYM.y) return { ok: false, motivo: `es del año ${p.anio}, el archivo es ${fileYM.y}` };
-                if (+p.suf !== mm) return { ok: false, motivo: `es del mes ${p.suf}, el archivo es de ${MESES_ES[mm - 1]}` };
-                return { ok: true };
-            }
-            case 'anual':
-                return mm === 1 ? { ok: true } : { ok: false, motivo: 'anual (AN): factura en Enero' };
-            case 'semestral': {
-                const meses = q.mesesObs || [1, 7];
-                return meses.includes(mm) ? { ok: true }
-                    : { ok: false, motivo: `semestral: factura en ${meses.map(x => MESES_ES[x - 1]).join(' y ')}` };
-            }
-            case 'trimestral': {
-                const meses = q.mesesObs || [1, 4, 7, 10];
-                return meses.includes(mm) ? { ok: true }
-                    : { ok: false, motivo: `trimestral: factura en ${meses.map(x => MESES_ES[x - 1]).join(', ')}` };
-            }
-            default:
-                return { ok: true };
-        }
-    }
-
-    // Función que aplica el filtro seleccionado (siempre sobre las que corresponden al mes del archivo)
-    function applyFilter(quotes) {
-        const mode = filterMode ? filterMode.value : 'todas';
-        const delMes = quotes.filter(q => correspondeAlMes(q).ok);
-        if (mode === 'todas') return delMes;
-        if (mode === 'spot')  return delMes.filter(q => q.tipoSpot || q.periodicidad === 'otro');
-        return delMes.filter(q => q.periodicidad === mode);
-    }
-
-    // Refrescar preview cuando cambia el filtro
-    filterMode && filterMode.addEventListener('change', () => {
-        if (parsedQuotes.length) renderPreview();
-    });
-
-    btnGenerate.addEventListener('click', async () => {
-        if (!parsedQuotes.length) return;
-        previewSection.classList.add('hidden');
-        progressSection.classList.remove('hidden');
-        progressBar.style.width = '0%';
-        progressText.textContent = 'Inicializando motor PDF…';
-
-        const toGenerate = applyFilter(parsedQuotes);
-        const zip = new JSZip();
-        const manifest = [];
-        try {
-            for (let i = 0; i < toGenerate.length; i++) {
-                const q = toGenerate[i];
-                progressText.textContent = `PDF ${i+1}/${toGenerate.length} — ${q.name}`;
-                progressBar.style.width = Math.round((i/toGenerate.length)*60) + '%';
-
-                const safe = q.name.replace(/[^a-zA-Z0-9áéíóúñÁÉÍÓÚÑ]/g, '_');
-                const archivo = `${q.cotizacionId}_${safe}.pdf`;
-
-                let pdfB64 = '';
-                await new Promise(resolve => {
-                    pdfMake.createPdf(docDef(q)).getBuffer(buf => {
-                        zip.file(archivo, buf);
-                        pdfB64 = bufToB64(buf);
-                        resolve();
-                    });
-                });
-
-                const mm2 = String(fileYM.m).padStart(2, '0');
-                manifest.push({
-                    cliente: q.name,
-                    cotizacionId: q.cotizacionId,
-                    correo: q.correo,
-                    mes: `${fileYM.y}-${mm2}`,
-                    anio: String(fileYM.y),
-                    mesCarpeta: `${mm2}. ${MESES_ES[fileYM.m - 1]}`,
-                    archivo,
-                    pdfB64
-                });
-
-                // Yield to keep UI responsive
-                await new Promise(r => setTimeout(r, 0));
+            // Convierte fechas de Excel (Date, serial numérico o texto) a Date (en UTC)
+            function excelDate(v) {
+                if (v instanceof Date) return v;
+                if (typeof v === 'number' && v > 20000) return new Date(Math.round((v - 25569) * 86400000));
+                if (typeof v === 'string' && v.trim()) { const d = new Date(v); return isNaN(d) ? null : d; }
+                return null;
             }
 
-            // Lote OneDrive: un solo .json con datos + PDFs en base64 (lo consume el flujo, sin descompresión)
-            const mmL = String(fileYM.m).padStart(2, '0');
-            loteBlob = new Blob([JSON.stringify(manifest)], { type: 'application/json' });
-            loteName = `Cotizaciones_${fileYM.y}-${mmL}.json`;
+            // --- Periodicidad (sufijo de "Cotización ID" + OBS por cliente) ---
+            //   01-12 → mensual (debe coincidir con el mes del archivo)
+            //   AN    → anual: factura en enero
+            //   S1/Sx → semestral: meses según OBS del cliente (ej. "ene-jul", "jun-dec"); si no hay, ene/jul
+            //   Q/Qx  → trimestral: meses según OBS; si no hay, ene/abr/jul/oct
+            function sufijoCot(cotId) {
+                const m = /^COT-(\d{4})-(.+)$/.exec(cotId || '');
+                return m ? { anio: +m[1], suf: m[2] } : null;
+            }
+            function clasificar(cotId) {
+                const p = sufijoCot(cotId);
+                if (!p) return 'otro';
+                if (/^\d{2}$/.test(p.suf)) return 'mensual';
+                if (p.suf === 'AN') return 'anual';
+                if (/^S\d*$/.test(p.suf)) return 'semestral';
+                if (/^Q\d*$/.test(p.suf)) return 'trimestral';
+                return 'otro';
+            }
+            // OBS tipo "ene-jul" / "jun-dec" → meses de facturación propios de ese cliente
+            function mesesDesdeObs(obsVals) {
+                for (const o of obsVals || []) {
+                    const m = /^([a-zá-ú]{3,4})\s*-\s*([a-zá-ú]{3,4})$/i.exec(String(o).trim());
+                    if (m) {
+                        const a = MES_ABREV[m[1].toLowerCase()], b = MES_ABREV[m[2].toLowerCase()];
+                        if (a && b) return [a, b];
+                    }
+                }
+                return null;
+            }
+            // ¿Esta cotización corresponde al mes del archivo? (código desconocido → pasa, nunca se oculta en silencio)
+            function correspondeAlMes(q) {
+                if (!fileYM) return { ok: true };
+                const mm = fileYM.m, p = sufijoCot(q.cotizacionId);
+                switch (q.periodicidad) {
+                    case 'mensual': {
+                        if (p.anio !== fileYM.y) return { ok: false, motivo: `es del año ${p.anio}, el archivo es ${fileYM.y}` };
+                        if (+p.suf !== mm) return { ok: false, motivo: `es del mes ${p.suf}, el archivo es de ${MESES_ES[mm - 1]}` };
+                        return { ok: true };
+                    }
+                    case 'anual':
+                        return mm === 1 ? { ok: true } : { ok: false, motivo: 'anual (AN): factura en Enero' };
+                    case 'semestral': {
+                        const meses = q.mesesObs || [1, 7];
+                        return meses.includes(mm) ? { ok: true }
+                            : { ok: false, motivo: `semestral: factura en ${meses.map(x => MESES_ES[x - 1]).join(' y ')}` };
+                    }
+                    case 'trimestral': {
+                        const meses = q.mesesObs || [1, 4, 7, 10];
+                        return meses.includes(mm) ? { ok: true }
+                            : { ok: false, motivo: `trimestral: factura en ${meses.map(x => MESES_ES[x - 1]).join(', ')}` };
+                    }
+                    default:
+                        return { ok: true };
+                }
+            }
 
-            // ZIP de respaldo: PDFs sueltos + manifiesto sin los base64
-            zip.file('manifiesto.json', JSON.stringify(manifest.map(({ pdfB64, ...rest }) => rest), null, 2));
+            // Función que aplica el filtro seleccionado (siempre sobre las que corresponden al mes del archivo)
+            function applyFilter(quotes) {
+                const mode = filterMode ? filterMode.value : 'todas';
+                const delMes = quotes.filter(q => correspondeAlMes(q).ok);
+                if (mode === 'todas') return delMes;
+                if (mode === 'spot') return delMes.filter(q => q.tipoSpot || q.periodicidad === 'otro');
+                return delMes.filter(q => q.periodicidad === mode);
+            }
 
-            progressText.textContent = 'Comprimiendo ZIP…';
-            progressBar.style.width = '75%';
-
-            zipBlob = await zip.generateAsync({ type: 'blob' }, meta => {
-                progressBar.style.width = (75 + Math.round(meta.percent * 0.25)) + '%';
+            // Refrescar preview cuando cambia el filtro
+            filterMode && filterMode.addEventListener('change', () => {
+                if (parsedQuotes.length) renderPreview();
             });
 
-            progressBar.style.width = '100%';
-            progressText.textContent = '¡Listo!';
-            zipName = 'Cotizaciones_' + currentFile.name.replace(/\.[^/.]+$/, '') + '.zip';
+            btnGenerate.addEventListener('click', async () => {
+                if (!parsedQuotes.length) return;
+                previewSection.classList.add('hidden');
+                progressSection.classList.remove('hidden');
+                progressBar.style.width = '0%';
+                progressText.textContent = 'Inicializando motor PDF…';
 
-            setTimeout(() => {
-                progressSection.classList.add('hidden');
-                resultsSection.classList.remove('hidden');
-            }, 400);
-        } catch(err) {
-            console.error(err);
-            alert('Error generando PDFs: ' + err.message);
-            progressSection.classList.add('hidden');
-            previewSection.classList.remove('hidden');
-        }
-    });
+                const toGenerate = applyFilter(parsedQuotes);
+                const zip = new JSZip();
+                const manifest = [];
+                try {
+                    for (let i = 0; i < toGenerate.length; i++) {
+                        const q = toGenerate[i];
+                        progressText.textContent = `PDF ${i + 1}/${toGenerate.length} — ${q.name}`;
+                        progressBar.style.width = Math.round((i / toGenerate.length) * 60) + '%';
 
-    btnDownload.addEventListener('click', () => {
-        if (!loteBlob) return;
-        const a = document.createElement('a');
-        a.href = URL.createObjectURL(loteBlob);
-        a.download = loteName;
-        a.click();
-        URL.revokeObjectURL(a.href);
-    });
+                        const safe = q.name.replace(/[^a-zA-Z0-9áéíóúñÁÉÍÓÚÑ]/g, '_');
+                        const archivo = `${q.cotizacionId}_${safe}.pdf`;
 
-    const btnDownloadZip = $('btnDownloadZip');
-    btnDownloadZip && btnDownloadZip.addEventListener('click', () => {
-        if (!zipBlob) return;
-        const a = document.createElement('a');
-        a.href = URL.createObjectURL(zipBlob);
-        a.download = zipName;
-        a.click();
-        URL.revokeObjectURL(a.href);
-    });
+                        let pdfB64 = '';
+                        await new Promise(resolve => {
+                            pdfMake.createPdf(docDef(q)).getBuffer(buf => {
+                                zip.file(archivo, buf);
+                                pdfB64 = bufToB64(buf);
+                                resolve();
+                            });
+                        });
 
-    function reset() {
-        currentFile = null; parsedQuotes = []; zipBlob = null; loteBlob = null;
-        fileYM = null; fileWarnings = [];
-        const ml = $('monthLabel'); if (ml) ml.textContent = '';
-        const nota = $('periodicityNote'); if (nota) nota.innerHTML = '';
-        fileInput.value = ''; fileName.textContent = '';
-        dropZone.classList.remove('hidden');
-        fileBar.classList.add('hidden');
-        [previewSection, progressSection, resultsSection].forEach(s => s.classList.add('hidden'));
-        previewBody.innerHTML = '';
-        clientCount.textContent = '0 cotizaciones';
-        btnGenerate.disabled = true;
-    }
-})();
-</script>
+                        const mm2 = String(fileYM.m).padStart(2, '0');
+                        manifest.push({
+                            cliente: q.name,
+                            cotizacionId: q.cotizacionId,
+                            correo: q.correo,
+                            mes: `${fileYM.y}-${mm2}`,
+                            anio: String(fileYM.y),
+                            mesCarpeta: `${mm2}. ${MESES_ES[fileYM.m - 1]}`,
+                            archivo,
+                            pdfB64
+                        });
+
+                        // Yield to keep UI responsive
+                        await new Promise(r => setTimeout(r, 0));
+                    }
+
+                    // Lote OneDrive: un solo .json con datos + PDFs en base64 (lo consume el flujo, sin descompresión)
+                    const mmL = String(fileYM.m).padStart(2, '0');
+                    loteBlob = new Blob([JSON.stringify(manifest)], { type: 'application/json' });
+                    loteName = `Cotizaciones_${fileYM.y}-${mmL}.json`;
+
+                    // ZIP de respaldo: PDFs sueltos + manifiesto sin los base64
+                    zip.file('manifiesto.json', JSON.stringify(manifest.map(({ pdfB64, ...rest }) => rest), null, 2));
+
+                    progressText.textContent = 'Comprimiendo ZIP…';
+                    progressBar.style.width = '75%';
+
+                    zipBlob = await zip.generateAsync({ type: 'blob' }, meta => {
+                        progressBar.style.width = (75 + Math.round(meta.percent * 0.25)) + '%';
+                    });
+
+                    progressBar.style.width = '100%';
+                    progressText.textContent = '¡Listo!';
+                    zipName = 'Cotizaciones_' + currentFile.name.replace(/\.[^/.]+$/, '') + '.zip';
+
+                    setTimeout(() => {
+                        progressSection.classList.add('hidden');
+                        resultsSection.classList.remove('hidden');
+                    }, 400);
+                } catch (err) {
+                    console.error(err);
+                    alert('Error generando PDFs: ' + err.message);
+                    progressSection.classList.add('hidden');
+                    previewSection.classList.remove('hidden');
+                }
+            });
+
+            btnDownload.addEventListener('click', () => {
+                if (!loteBlob) return;
+                const a = document.createElement('a');
+                a.href = URL.createObjectURL(loteBlob);
+                a.download = loteName;
+                a.click();
+                URL.revokeObjectURL(a.href);
+            });
+
+            const btnDownloadZip = $('btnDownloadZip');
+            btnDownloadZip && btnDownloadZip.addEventListener('click', () => {
+                if (!zipBlob) return;
+                const a = document.createElement('a');
+                a.href = URL.createObjectURL(zipBlob);
+                a.download = zipName;
+                a.click();
+                URL.revokeObjectURL(a.href);
+            });
+
+            function reset() {
+                currentFile = null; parsedQuotes = []; zipBlob = null; loteBlob = null;
+                fileYM = null; fileWarnings = [];
+                const ml = $('monthLabel'); if (ml) ml.textContent = '';
+                const nota = $('periodicityNote'); if (nota) nota.innerHTML = '';
+                fileInput.value = ''; fileName.textContent = '';
+                dropZone.classList.remove('hidden');
+                fileBar.classList.add('hidden');
+                [previewSection, progressSection, resultsSection].forEach(s => s.classList.add('hidden'));
+                previewBody.innerHTML = '';
+                clientCount.textContent = '0 cotizaciones';
+                btnGenerate.disabled = true;
+            }
+        })();
+    </script>
 </body>
+
 </html>
