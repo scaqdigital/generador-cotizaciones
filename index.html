@@ -354,10 +354,12 @@
             <div class="results-btns">
                 <button class="btn btn-success" id="btnDownload">
                     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-                    Descargar ZIP
+                    Descargar Lote OneDrive (.json)
                 </button>
+                <button class="btn btn-ghost" id="btnDownloadZip">Descargar ZIP (respaldo)</button>
                 <button class="btn btn-ghost" id="btnReset">Procesar otro archivo</button>
             </div>
+            <p class="dz-secondary" style="margin-top:10px;">Sube el archivo .json a la raíz de tu carpeta <strong>CotAuto</strong> en OneDrive — el flujo hace el resto.</p>
         </section>
     </main>
 
@@ -385,7 +387,17 @@
           btnReset = $('btnReset');
 
     let currentFile = null, parsedQuotes = [], zipBlob = null, zipName = 'cotizaciones.zip';
+    let loteBlob = null, loteName = 'lote.json';
     let fileYM = null, fileWarnings = [];
+
+    // Uint8Array/ArrayBuffer → base64 (por bloques, para no reventar la pila)
+    function bufToB64(buf) {
+        const bytes = new Uint8Array(buf);
+        let binary = '';
+        for (let i = 0; i < bytes.length; i += 0x8000)
+            binary += String.fromCharCode.apply(null, bytes.subarray(i, i + 0x8000));
+        return btoa(binary);
+    }
 
     // --- Drag & Drop ---
     ['dragenter','dragover'].forEach(ev => dropZone.addEventListener(ev, e => { e.preventDefault(); dropZone.classList.add('dragover'); }));
@@ -441,18 +453,19 @@
                     obs: h.indexOf('OBS'), tip: h.indexOf('TIPO DE COBRO')
                 };
 
-                // Mes del archivo = moda de FECHA FACTURACION (columna A): el archivo manda
+                // Mes del archivo = mes MÁS RECIENTE en FECHA FACTURACION (columna A).
+                // El archivo vivo acumula filas de meses anteriores (ocultas con filtros de Excel):
+                // el ciclo vigente es siempre el último mes presente.
                 fileWarnings = [];
-                const freq = {};
+                let maxYM = 0;
                 for (let i = 4; i < rows.length; i++) {
                     const r = rows[i];
                     if (!r || !r[idx.cli]) continue;
                     const d = idx.fec !== -1 ? excelDate(r[idx.fec]) : null;
-                    if (d) { const k = d.getUTCFullYear() * 100 + d.getUTCMonth() + 1; freq[k] = (freq[k] || 0) + 1; }
+                    if (d) { const k = d.getUTCFullYear() * 100 + d.getUTCMonth() + 1; if (k > maxYM) maxYM = k; }
                 }
-                const top = Object.entries(freq).sort((a, b) => b[1] - a[1])[0];
-                if (top) {
-                    fileYM = { y: Math.floor(+top[0] / 100), m: +top[0] % 100 };
+                if (maxYM) {
+                    fileYM = { y: Math.floor(maxYM / 100), m: maxYM % 100 };
                 } else {
                     const d = new Date();
                     fileYM = { y: d.getFullYear(), m: d.getMonth() + 1 };
@@ -460,21 +473,23 @@
                 }
 
                 const groups = {};
+                let historicas = 0;
                 for (let i = 4; i < rows.length; i++) {
                     const r = rows[i];
                     if (!r || !r[idx.cli]) continue;
                     const cli = r[idx.cli].toString().trim();
+
+                    // Filas de meses anteriores (histórico del archivo, normalmente ocultas por filtros) → se omiten
+                    const fRow = idx.fec !== -1 ? excelDate(r[idx.fec]) : null;
+                    if (fRow && (fRow.getUTCFullYear() !== fileYM.y || fRow.getUTCMonth() + 1 !== fileYM.m)) {
+                        historicas++;
+                        continue;
+                    }
+
                     const cotRaw = (r[idx.cot]||'').toString();
                     const cot = cotRaw.replace(/\s+/g, '').toUpperCase();
                     if (!cot || /^(NOAPLICA|N\/A)$/.test(cot)) continue;
                     if (cot !== cotRaw) fileWarnings.push(`Cotización ID normalizado en ${cli}: "${cotRaw.trim()}" → "${cot}"`);
-
-                    // Fila con fecha de otro mes dentro del archivo → excluida (residuo de edición manual)
-                    const fRow = idx.fec !== -1 ? excelDate(r[idx.fec]) : null;
-                    if (fRow && (fRow.getUTCFullYear() !== fileYM.y || fRow.getUTCMonth() + 1 !== fileYM.m)) {
-                        fileWarnings.push(`Fila excluida por fecha fuera del mes del archivo: ${cli} ${cot} (${fRow.toISOString().slice(0, 10)})`);
-                        continue;
-                    }
 
                     const key = cli + '::' + cot;
                     if (!groups[key]) {
@@ -500,6 +515,8 @@
                     }
                     groups[key].items.push({ detalle, tarifa, moneda });
                 }
+
+                if (historicas) fileWarnings.push(`${historicas} fila(s) de meses anteriores omitidas (histórico del archivo).`);
 
                 parsedQuotes = Object.values(groups).map(g => {
                     let tUF = 0, tUSD = 0;
@@ -755,9 +772,11 @@
                 const safe = q.name.replace(/[^a-zA-Z0-9áéíóúñÁÉÍÓÚÑ]/g, '_');
                 const archivo = `${q.cotizacionId}_${safe}.pdf`;
 
+                let pdfB64 = '';
                 await new Promise(resolve => {
                     pdfMake.createPdf(docDef(q)).getBuffer(buf => {
                         zip.file(archivo, buf);
+                        pdfB64 = bufToB64(buf);
                         resolve();
                     });
                 });
@@ -770,14 +789,21 @@
                     mes: `${fileYM.y}-${mm2}`,
                     anio: String(fileYM.y),
                     mesCarpeta: `${mm2}. ${MESES_ES[fileYM.m - 1]}`,
-                    archivo
+                    archivo,
+                    pdfB64
                 });
 
                 // Yield to keep UI responsive
                 await new Promise(r => setTimeout(r, 0));
             }
 
-            zip.file('manifiesto.json', JSON.stringify(manifest, null, 2));
+            // Lote OneDrive: un solo .json con datos + PDFs en base64 (lo consume el flujo, sin descompresión)
+            const mmL = String(fileYM.m).padStart(2, '0');
+            loteBlob = new Blob([JSON.stringify(manifest)], { type: 'application/json' });
+            loteName = `Cotizaciones_${fileYM.y}-${mmL}.json`;
+
+            // ZIP de respaldo: PDFs sueltos + manifiesto sin los base64
+            zip.file('manifiesto.json', JSON.stringify(manifest.map(({ pdfB64, ...rest }) => rest), null, 2));
 
             progressText.textContent = 'Comprimiendo ZIP…';
             progressBar.style.width = '75%';
@@ -803,6 +829,16 @@
     });
 
     btnDownload.addEventListener('click', () => {
+        if (!loteBlob) return;
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(loteBlob);
+        a.download = loteName;
+        a.click();
+        URL.revokeObjectURL(a.href);
+    });
+
+    const btnDownloadZip = $('btnDownloadZip');
+    btnDownloadZip && btnDownloadZip.addEventListener('click', () => {
         if (!zipBlob) return;
         const a = document.createElement('a');
         a.href = URL.createObjectURL(zipBlob);
@@ -812,7 +848,7 @@
     });
 
     function reset() {
-        currentFile = null; parsedQuotes = []; zipBlob = null;
+        currentFile = null; parsedQuotes = []; zipBlob = null; loteBlob = null;
         fileYM = null; fileWarnings = [];
         const ml = $('monthLabel'); if (ml) ml.textContent = '';
         const nota = $('periodicityNote'); if (nota) nota.innerHTML = '';
